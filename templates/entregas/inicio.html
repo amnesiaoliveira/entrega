@@ -1,0 +1,54 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block body %}
+<div class="app-layout" data-user="{{ request.user.pk }}" data-hoje="{{ hoje }}">
+  <aside class="sidebar">
+    <a class="brand" href="/"><span class="brand-mark">b<span>↗</span></span><span>super baranda<small>GESTÃO DE ENTREGAS</small></span></a>
+    <p class="nav-caption">PRINCIPAL</p>
+    <nav aria-label="Menu principal">
+      <button class="nav-item active" data-view="operacao"><span data-icon="grid"></span>Visão geral</button>
+      <button class="nav-item" data-view="historico"><span data-icon="box"></span>Todas as entregas</button>
+    </nav>
+    <div class="sidebar-tip"><span data-icon="phone"></span><strong>A operação vai com você</strong><p>Instale o aplicativo e acompanhe as entregas pelo celular.</p><button id="install" class="text-button">Instalar aplicativo <span>↗</span></button></div>
+    <div class="sidebar-bottom"><span class="avatar">{{ request.user.username|first|upper }}</span><div><strong>{{ request.user.get_short_name|default:request.user.username }}</strong><small>Equipe Super Baranda</small></div><form method="post" action="{% url 'logout' %}" id="logout-form">{% csrf_token %}<button class="icon-button" aria-label="Sair" title="Sair"><span data-icon="logout"></span></button></form></div>
+  </aside>
+  <div class="workspace">
+    <header class="topbar"><div class="breadcrumb">Operação <span>/</span> <strong id="breadcrumb-title">Visão geral</strong></div><div class="topbar-right"><span id="connection" class="connection"><i></i>Conectado</span><span class="store-label"><span data-icon="store"></span> Super Baranda</span></div></header>
+    <main class="content">
+      <div class="page-heading"><div><div class="eyebrow" id="today-label"></div><h1 id="page-title">Entregas sob controle<span>.</span></h1><p class="muted" id="page-description">Da separação à porta do cliente, acompanhe cada etapa.</p></div><button class="button primary" id="new-delivery"><span data-icon="plus"></span>Nova entrega</button></div>
+      <div id="offline-banner" class="notice" hidden>Você está sem conexão. Exibindo a última consulta salva; alterações precisam de conexão.</div>
+      <section class="stats" aria-label="Resumo das entregas">
+        <button class="stat-card" data-status=""><div><span>Total de entregas</span><span class="stat-icon green" data-icon="box"></span></div><strong id="stat-total">—</strong><small>No período selecionado</small></button>
+        <button class="stat-card" data-status="pendente"><div><span>Pendentes</span><span class="stat-icon amber" data-icon="clock"></span></div><strong id="stat-pendente">—</strong><small><i class="dot amber"></i>Aguardando saída</small></button>
+        <button class="stat-card" data-status="em_rota"><div><span>Em rota</span><span class="stat-icon blue" data-icon="truck"></span></div><strong id="stat-em_rota">—</strong><small><i class="dot blue"></i>A caminho do cliente</small></button>
+        <button class="stat-card" data-status="entregue"><div><span>Entregues</span><span class="stat-icon green" data-icon="check"></span></div><strong id="stat-entregue">—</strong><small><i class="dot green"></i>Entrega concluída</small></button>
+      </section>
+      <section class="deliveries-panel">
+        <div class="panel-heading"><div><h2>Controle de entregas <span id="list-count" class="count">0</span></h2><p class="muted">Todos os detalhes para uma entrega bem-feita.</p></div><button class="button secondary" id="export"><span data-icon="download"></span>Exportar</button></div>
+        <div class="filter-bar"><div class="search-field"><span data-icon="search"></span><input type="search" id="search" placeholder="Buscar cliente, cupom ou endereço…" aria-label="Buscar entregas"></div><label class="date-field"><span data-icon="calendar"></span><input type="date" id="date" value="{{ hoje }}" aria-label="Data das entregas"></label><button class="icon-button refresh" id="refresh" title="Atualizar entregas" aria-label="Atualizar entregas"><span data-icon="refresh"></span></button></div>
+        <div class="status-tabs" role="group" aria-label="Filtrar por status"><button class="active" data-status="">Todas <span id="tab-total">0</span></button><button data-status="pendente">Pendentes <span id="tab-pendente">0</span></button><button data-status="em_rota">Em rota <span id="tab-em_rota">0</span></button><button data-status="entregue">Entregues <span id="tab-entregue">0</span></button><button data-status="cancelada">Canceladas <span id="tab-cancelada">0</span></button></div>
+        <div id="list-error" class="form-error" role="alert" hidden></div>
+        <div class="table-wrap"><table><thead><tr><th>ENTREGA / CLIENTE</th><th>DESTINO</th><th>VOLUMES</th><th>ENTREGADOR</th><th>STATUS</th><th><span class="sr-only">Ações</span></th></tr></thead><tbody id="delivery-list"></tbody></table></div>
+        <div id="empty-state" class="empty-state" hidden><span class="empty-icon" data-icon="box"></span><h3>Nenhuma entrega por aqui</h3><p class="muted" id="empty-description">Cadastre a primeira entrega e comece a organizar o dia.</p><button class="button secondary" id="empty-new">Cadastrar entrega <span>→</span></button></div>
+        <div id="loading" class="empty-state">Carregando entregas…</div>
+        <footer class="table-footer"><span id="showing">Buscando entregas</span><div><button class="icon-button" id="previous" aria-label="Página anterior">←</button><span id="page-info">1 / 1</span><button class="icon-button" id="next" aria-label="Próxima página">→</button></div></footer>
+      </section>
+      <div class="bottom-note"><span data-icon="check"></span> Cuidado em cada etapa. Qualidade em cada entrega.<span id="last-updated"></span></div>
+    </main>
+  </div>
+</div>
+<dialog id="delivery-dialog" aria-labelledby="dialog-title"><form id="delivery-form">
+  <div class="dialog-heading"><div><span class="eyebrow">SUPER BARANDA · ENTREGAS</span><h2 id="dialog-title">Nova entrega</h2></div><button type="button" class="icon-button" data-close aria-label="Fechar">✕</button></div>
+  <div class="dialog-body"><p class="muted" id="form-description">Preencha os dados. A sequência será gerada ao salvar.</p><div id="form-errors" class="form-error" role="alert" hidden></div>
+    <h3 class="form-section"><span>01</span> Dados do destinatário</h3>
+    <div class="form-grid"><label class="full">Nome completo *<input name="nome" required maxlength="150" autocomplete="name" placeholder="Nome de quem vai receber"></label><label class="full">Endereço completo *<textarea name="endereco" required maxlength="500" rows="2" autocomplete="street-address" placeholder="Rua, número, complemento, bairro e cidade"></textarea></label><label>Telefone *<input name="telefone" type="tel" required maxlength="30" autocomplete="tel" placeholder="DDD + número"></label><label>Número do cupom *<input name="cupom" required maxlength="50" placeholder="Ex.: 45872"></label></div>
+    <h3 class="form-section"><span>02</span> Organização da entrega</h3>
+    <div class="form-grid"><label>Data da entrega *<input type="date" name="data" required></label><label>Horário previsto<input type="time" name="horario"></label><label>Quantidade de volumes *<input type="number" name="volumes" min="1" max="9999" value="1" required></label><label>Entregador<input name="responsavel" maxlength="100" placeholder="Quem fará a entrega?" list="couriers"></label><label class="full">Observações<textarea name="observacoes" maxlength="1000" rows="2" placeholder="Ponto de referência, instruções de recebimento…"></textarea></label></div><datalist id="couriers"></datalist>
+  </div><div class="dialog-footer"><span class="muted">* Campos obrigatórios</span><button class="button secondary" type="button" data-close>Voltar</button><button class="button primary" type="submit" id="save-delivery">Salvar entrega</button></div>
+</form></dialog>
+<dialog id="detail-dialog" aria-labelledby="detail-title"><div class="dialog-heading"><div><span class="eyebrow">DETALHES DA ENTREGA</span><h2 id="detail-title">Entrega</h2></div><button class="icon-button" data-close aria-label="Fechar">✕</button></div><div class="dialog-body" id="detail-content"></div><div class="dialog-footer" id="detail-actions"></div></dialog>
+<dialog id="confirm-dialog" class="small-dialog" aria-labelledby="confirm-title"><div class="dialog-body"><h2 id="confirm-title">Confirmar alteração</h2><p id="confirm-message" class="muted"></p><div id="confirm-error" class="form-error" role="alert" hidden></div></div><div class="dialog-footer"><button class="button secondary" data-close>Voltar</button><button class="button primary" id="confirm-action">Confirmar</button></div></dialog>
+<dialog id="install-dialog" class="small-dialog" aria-labelledby="install-title"><div class="dialog-heading"><h2 id="install-title">Instalar aplicativo</h2><button class="icon-button" data-close aria-label="Fechar">✕</button></div><div class="dialog-body"><p>No <strong>Android ou computador</strong>, abra o menu do navegador e escolha “Instalar aplicativo”.</p><p>No <strong>iPhone ou iPad</strong>, use o Safari: toque em Compartilhar e em “Adicionar à Tela de Início”.</p><p class="muted">A instalação fica disponível em HTTPS ou localhost. Sem conexão, você pode consultar a última lista carregada neste dispositivo.</p></div></dialog>
+<div id="toast" role="status" class="toast" hidden></div>
+{% endblock %}
+{% block scripts %}<script src="{% static 'app.js' %}" defer></script>{% endblock %}

@@ -1,0 +1,1 @@
+{"version": "0.2.0", "configurations": [{"name": "Django: Super Baranda", "type": "debugpy", "request": "launch", "program": "${workspaceFolder}/manage.py", "args": ["runserver"], "cwd": "${workspaceFolder}", "console": "integratedTerminal", "django": true, "justMyCode": true}]}
