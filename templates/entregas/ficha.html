@@ -1,3 +1,4 @@
+{% load static %}
 <!doctype html>
 <html lang="pt-BR" data-sequencia="{{ entrega.sequencia }}">
 <head>
@@ -307,12 +308,13 @@
       .print-value { display: block; border: 1px solid var(--field); min-height: 8mm; padding: 1.5mm 2mm; font-size: 9pt; overflow-wrap: anywhere; }
     }
   </style>
+<link rel="stylesheet" href="{% static 'ficha-compacta.css' %}">
 </head>
 
 <body>
   <div class="toolbar">
     <button class="btn-print" type="button" onclick="imprimirFicha()">
-      Imprimir meia folha A4
+      Imprimir ficha compacta (A6)
     </button>
   </div>
 

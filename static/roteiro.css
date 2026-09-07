@@ -1,0 +1,269 @@
+* {
+  box-sizing: border-box
+}
+
+body {
+  margin: 0;
+  background: #f5f7f4;
+  color: #263b33;
+  font: 14px "Segoe UI", Arial, sans-serif
+}
+
+.toolbar {
+  max-width: 850px;
+  margin: 24px auto;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 15px;
+  padding: 0 16px
+}
+
+a {
+  color: #174c3c
+}
+
+button {
+  cursor: pointer;
+  font: inherit;
+  border: 1px solid #d3dfd5;
+  border-radius: 6px;
+  padding: 9px 15px;
+  background: white;
+  color: #174c3c
+}
+
+button:disabled {
+  opacity: .35;
+  cursor: default
+}
+
+button:focus-visible,
+a:focus-visible {
+  outline: 3px solid #759c82;
+  outline-offset: 2px
+}
+
+#print-route {
+  background: #174c3c;
+  color: white
+}
+
+main {
+  max-width: 820px;
+  margin: 0 auto 30px;
+  padding: 35px;
+  background: white;
+  border: 1px solid #e5eae6
+}
+
+h1 {
+  font-size: 27px;
+  margin: 8px 0
+}
+
+header>p {
+  font-size: 12px;
+  color: #65776a;
+  line-height: 1.6
+}
+
+.brand {
+  font-weight: 750;
+  letter-spacing: 2px;
+  color: #174c3c
+}
+
+.totals {
+  display: flex;
+  gap: 25px;
+  padding: 14px 0;
+  border-bottom: 1px solid #dbe4da
+}
+
+.instructions {
+  background: #eef4ed;
+  padding: 12px;
+  border-radius: 6px
+}
+
+.departure {
+  font-size: 12px;
+  line-height: 2;
+  margin: 18px 0
+}
+
+.stop {
+  border: 1px solid #d5dfd5;
+  border-radius: 8px;
+  padding: 18px;
+  margin: 16px 0;
+  break-inside: avoid;
+  overflow-wrap: anywhere
+}
+
+.stop-heading {
+  display: flex;
+  align-items: center;
+  gap: 12px
+}
+
+.stop-heading h2 {
+  font-size: 16px;
+  margin: 0;
+  flex: 1
+}
+
+.stop-heading>strong {
+  font-size: 12px
+}
+
+.stop-number {
+  display: inline-block;
+  text-align: center;
+  background: #eaf2ed;
+  padding: 5px 9px;
+  margin-right: 5px;
+  border-radius: 5px
+}
+
+.reorder {
+  display: flex;
+  gap: 5px
+}
+
+.reorder button {
+  padding: 5px 10px
+}
+
+.address {
+  font-size: 13px;
+  line-height: 1.6;
+  white-space: pre-wrap
+}
+
+dl {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 12px;
+  margin: 12px 0
+}
+
+dt {
+  font-size: 10px;
+  color: #6b7c70;
+  margin-bottom: 3px
+}
+
+dd {
+  margin: 0;
+  font-size: 12px
+}
+
+.notes {
+  font-size: 12px;
+  line-height: 1.6
+}
+
+.receipt {
+  border-top: 1px dashed #c4d1c3;
+  padding-top: 12px;
+  margin-bottom: 0;
+  font-size: 12px;
+  line-height: 2
+}
+
+footer {
+  font-size: 11px;
+  color: #65776a;
+  padding-top: 12px
+}
+
+@page {
+  size: A4 portrait;
+  margin: 12mm
+}
+
+@media print {
+  body {
+    background: white;
+    font-size: 10pt
+  }
+
+  .toolbar,
+  .reorder,
+  .instructions {
+    display: none
+  }
+
+  main {
+    border: 0;
+    max-width: none;
+    margin: 0;
+    padding: 0
+  }
+
+  header>p {
+    font-size: 9pt
+  }
+
+  h1 {
+    font-size: 20pt
+  }
+
+  .stop {
+    border-radius: 0;
+    padding: 4mm;
+    margin: 4mm 0
+  }
+
+  .stop-heading h2 {
+    font-size: 12pt
+  }
+
+  .address,
+  .notes,
+  .receipt,
+  dd {
+    font-size: 9pt
+  }
+
+  .stop-number {
+    background: none
+  }
+
+  .departure {
+    font-size: 9pt
+  }
+}
+
+@media(max-width:600px) {
+  main {
+    padding: 18px;
+    margin: 0 10px 20px
+  }
+
+  .toolbar {
+    font-size: 12px
+  }
+
+  .stop {
+    padding: 12px
+  }
+
+  .stop-heading {
+    flex-wrap: wrap
+  }
+
+  .stop-heading h2 {
+    min-width: 65%
+  }
+
+  dl {
+    grid-template-columns: 1fr 1fr
+  }
+
+  .receipt {
+    line-height: 2.4
+  }
+}

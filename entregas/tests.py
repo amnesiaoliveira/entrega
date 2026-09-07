@@ -212,3 +212,107 @@ def test_pwa_e_logout(cliente):
     assert cliente.get(reverse("logout")).status_code == 405
     assert cliente.post(reverse("logout")).status_code == 302
     assert cliente.get(reverse("lista")).status_code == 401
+
+
+def test_roteiro_selecao_ordem_totais_e_escape(cliente, dados):
+    primeira = cadastrar(cliente, dados).json()["entrega"]
+    dados.update(
+        nome="<script>alert(1)</script>", volumes=5, requisicao=str(uuid.uuid4())
+    )
+    segunda = cadastrar(cliente, dados).json()["entrega"]
+    eventos_antes = EventoEntrega.objects.count()
+    response = cliente.get(
+        reverse("roteiro"), {"ids": f"{segunda['id']},{primeira['id']},{segunda['id']}"}
+    )
+    assert response.status_code == 200
+    assert [entrega.pk for entrega in response.context["entregas"]] == [
+        segunda["id"],
+        primeira["id"],
+    ]
+    assert response.context["total_volumes"] == 8
+    assert "&lt;script&gt;" in response.content.decode()
+    assert "<script>alert(1)</script>" not in response.content.decode()
+    assert "no-store" in response["Cache-Control"]
+    assert EventoEntrega.objects.count() == eventos_antes
+    assert not Entrega.objects.exclude(status="pendente").exists()
+
+
+@pytest.mark.parametrize(
+    "ids", ["", "abc", "-1", "0", "1,,2", "9" * 19, ",".join(["1"] * 101)]
+)
+def test_roteiro_rejeita_selecao_invalida(cliente, ids):
+    response = cliente.get(reverse("roteiro"), {"ids": ids})
+    assert response.status_code == 400
+    assert "Selecione de 1 a 100" in response.content.decode()
+
+
+def test_roteiro_nao_omite_entrega_inexistente(cliente, dados):
+    entrega = cadastrar(cliente, dados).json()["entrega"]
+    assert (
+        cliente.get(reverse("roteiro"), {"ids": f"{entrega['id']},999999"}).status_code
+        == 400
+    )
+
+
+@pytest.mark.django_db
+def test_roteiro_exige_login():
+    assert Client().get(reverse("roteiro"), {"ids": "1"}).status_code == 302
+
+
+def test_roteiro_ignora_outros_status_e_recalcula_totais(cliente, dados):
+    selecionadas = []
+    for estado in ["pendente", "em_rota", "entregue", "cancelada", "pendente"]:
+        dados["requisicao"] = str(uuid.uuid4())
+        item = cadastrar(cliente, dados).json()["entrega"]
+        Entrega.objects.filter(pk=item["id"]).update(status=estado)
+        selecionadas.append(item["id"])
+    response = cliente.get(
+        reverse("roteiro"), {"ids": ",".join(map(str, reversed(selecionadas)))}
+    )
+    assert response.status_code == 200
+    assert [item.pk for item in response.context["entregas"]] == [
+        selecionadas[4],
+        selecionadas[0],
+    ]
+    assert response.context["total_volumes"] == 6
+    assert response.context["ignoradas"] == 3
+    for pk in selecionadas[1:4]:
+        assert f'data-id="{pk}"' not in response.content.decode()
+
+
+@pytest.mark.parametrize("estado", ["em_rota", "entregue", "cancelada"])
+def test_roteiro_sem_pendentes_nao_oferece_impressao(cliente, dados, estado):
+    item = cadastrar(cliente, dados).json()["entrega"]
+    # A situação pode mudar depois da seleção, antes de abrir a guia.
+    Entrega.objects.filter(pk=item["id"]).update(status=estado)
+    response = cliente.get(reverse("roteiro"), {"ids": item["id"]})
+    assert response.status_code == 400
+    html = response.content.decode()
+    assert "Nenhuma entrega pendente" in html
+    assert 'id="print-route"' not in html
+    assert 'class="stop"' not in html
+
+
+def test_iniciar_rota_atribui_entregador_na_mesma_operacao(cliente, dados):
+    dados["responsavel"] = ""
+    entrega = cadastrar(cliente, dados).json()["entrega"]
+    resposta = alterar(cliente, entrega, status="em_rota", responsavel="  Carlos  ")
+    assert resposta.status_code == 200
+    registro = Entrega.objects.get()
+    assert registro.status == "em_rota"
+    assert registro.responsavel == "Carlos"
+    assert registro.versao == 2
+    assert registro.eventos.count() == 2
+
+
+@pytest.mark.parametrize("responsavel", [None, [], "x" * 101, "   "])
+def test_iniciar_rota_rejeita_entregador_invalido(cliente, dados, responsavel):
+    entrega = cadastrar(cliente, dados).json()["entrega"]
+    assert (
+        alterar(cliente, entrega, status="em_rota", responsavel=responsavel).status_code
+        == 400
+    )
+    registro = Entrega.objects.get()
+    assert registro.status == "pendente"
+    assert registro.responsavel == dados["responsavel"]
+    assert registro.versao == 1

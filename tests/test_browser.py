@@ -47,33 +47,37 @@ class TestNavegador(StaticLiveServerTestCase):
             expect(page.locator("#stat-total")).to_have_text("1")
             expect(page.locator("#delivery-dialog")).not_to_be_visible()
             assert page.evaluate("localStorage.getItem('baranda.draft.1')") is None
-            page.locator(".row-open").click()
+            expect(page.get_by_role("columnheader", name="AÇÕES")).to_be_visible()
+            expect(page.locator('[data-action="edit"]')).to_have_count(0)
+            expect(page.locator('[data-action="print"]')).to_have_count(0)
             page.get_by_role("button", name="Iniciar rota").click()
             page.locator("#confirm-action").click()
             expect(page.locator("#confirm-error")).to_contain_text("entregador")
-            page.locator("#confirm-dialog [data-close]").click()
-            page.get_by_role("button", name="Editar", exact=True).click()
-            page.get_by_label("Entregador", exact=True).fill("Carlos Oliveira")
-            page.get_by_role("button", name="Salvar entrega", exact=True).click()
-            expect(page.locator("#delivery-dialog")).not_to_be_visible()
-            page.locator(".row-open").click()
-            page.get_by_role("button", name="Iniciar rota").click()
+            page.get_by_label("Entregador da rota *", exact=True).fill(
+                "Carlos Oliveira"
+            )
             page.locator("#confirm-action").click()
             expect(page.locator("#stat-em_rota")).to_have_text("1")
-            page.locator(".row-open").click()
-            page.get_by_role("button", name="Confirmar entrega").click()
-            page.locator("#confirm-action").click()
-            expect(page.locator("#stat-entregue")).to_have_text("1")
-            page.locator(".row-open").click()
-            expect(page.locator(".timeline li")).to_have_count(4)
+            expect(page.locator('[data-action="start"]')).to_have_count(0)
+            expect(page.locator('[data-action="cancel"]')).to_have_count(1)
+            page.get_by_role("button", name="Editar", exact=True).click()
+            page.get_by_label("Observações", exact=True).fill("Chamar na portaria")
+            page.get_by_role("button", name="Salvar entrega", exact=True).click()
+            expect(page.locator("#delivery-dialog")).not_to_be_visible()
             with context.expect_page() as receipt_info:
-                page.get_by_role("link", name="Imprimir ficha").click()
+                page.get_by_role("button", name="Imprimir ficha").click()
             receipt = receipt_info.value
             receipt.wait_for_load_state()
             expect(receipt.locator("#nome-completo")).to_have_value("Maria da Silva")
             expect(receipt.locator("#numero-sequencia")).not_to_have_value("")
             receipt.pdf(path=str(RESULTS / "ficha.pdf"), prefer_css_page_size=True)
             receipt.close()
+            page.get_by_role("button", name="Confirmar entrega").click()
+            page.locator("#confirm-action").click()
+            expect(page.locator("#stat-entregue")).to_have_text("1")
+            expect(page.locator("[data-online-action]")).to_have_count(0)
+            page.locator(".row-open").click()
+            expect(page.locator(".timeline li")).to_have_count(4)
             page.locator("#detail-dialog [data-close]").click()
             with page.expect_download() as download_info:
                 page.get_by_role("button", name="Exportar", exact=True).click()
@@ -185,6 +189,44 @@ class TestNavegador(StaticLiveServerTestCase):
             page.get_by_role("button", name="Atualizar entregas").click()
             expect(page.locator("#stat-total")).to_have_text("10")
             expect(page.locator("#delivery-list tr")).to_have_count(8)
+            expect(page.locator("#emit-route")).to_be_disabled()
+            page.get_by_role(
+                "checkbox", name="Selecionar entregas desta página"
+            ).check()
+            expect(page.locator("#selection-count")).to_contain_text("8 selecionada(s)")
+            page.get_by_role("button", name="Próxima página").click()
+            page.get_by_role(
+                "checkbox", name="Selecionar entregas desta página"
+            ).check()
+            expect(page.locator("#selection-count")).to_contain_text(
+                "10 selecionada(s)"
+            )
+            page.locator(".status-tabs [data-status='em_rota']").click()
+            expect(page.locator("#selection-count")).to_contain_text(
+                "10 selecionada(s)"
+            )
+            with context.expect_page() as route_info:
+                page.get_by_role("button", name="Emitir guia de roteiro").click()
+            route = route_info.value
+            route.wait_for_load_state()
+            route.on("pageerror", lambda error: errors.append(str(error)))
+            expect(route.locator(".stop")).to_have_count(3)
+            expect(route.locator(".totals")).to_contain_text("8 volumes")
+            expect(route.locator("#route-exclusions")).to_contain_text(
+                "7 entregas ignoradas"
+            )
+            before = route.locator(".stop").first.get_attribute("data-id")
+            route.locator(".stop").first.locator('[data-move="1"]').click()
+            assert route.locator(".stop").nth(1).get_attribute("data-id") == before
+            expect(route.locator(".stop-number").nth(1)).to_have_text("2")
+            route.pdf(path=str(RESULTS / "roteiro.pdf"), prefer_css_page_size=True)
+            route.set_viewport_size({"width": 390, "height": 844})
+            assert route.evaluate("document.documentElement.scrollWidth <= innerWidth")
+            route.screenshot(path=str(RESULTS / "roteiro-mobile.png"), full_page=True)
+            route.close()
+            page.get_by_role("button", name="Limpar seleção").click()
+            expect(page.locator("#emit-route")).to_be_disabled()
+            page.locator(".status-tabs [data-status='']").click()
             page.screenshot(path=str(RESULTS / "desktop.png"), full_page=True)
             page.get_by_role("button", name="Próxima página").click()
             expect(page.locator("#delivery-list tr")).to_have_count(2)

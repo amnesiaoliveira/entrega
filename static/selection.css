@@ -1,0 +1,162 @@
+.selection-bar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 14px 25px;
+  border-bottom: 1px solid var(--line);
+  background: #fafcf9
+}
+
+.selection-bar label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap
+}
+
+.selection-bar input,
+.delivery-select {
+  width: 17px;
+  height: 17px;
+  margin: 0;
+  padding: 0;
+  flex-shrink: 0;
+  accent-color: var(--green);
+  cursor: pointer
+}
+
+.delivery-select:focus-visible,
+.selection-bar input:focus-visible {
+  outline: 2px solid #719980;
+  outline-offset: 3px
+}
+
+.selection-bar>span {
+  font-size: 10px;
+  color: #6a7f6f;
+  flex: 1
+}
+
+.selection-bar .button {
+  font-size: 11px;
+  min-height: 35px;
+  padding: 8px 12px
+}
+
+.selection-bar .text-button {
+  font-size: 10px
+}
+
+tbody tr.selected-delivery {
+  background: #f0f6ef
+}
+
+.delivery-select {
+  margin-right: 2px
+}
+
+@media(max-width:600px) {
+  .selection-bar {
+    padding: 14px 16px;
+    gap: 14px
+  }
+
+  .selection-bar>span {
+    flex-basis: 45%
+  }
+
+  .selection-bar .button {
+    margin-left: auto
+  }
+
+  .delivery-select {
+    width: 18px;
+    height: 18px
+  }
+
+  .client-cell {
+    gap: 7px
+  }
+
+  .client-avatar {
+    width: 27px;
+    height: 30px
+  }
+
+  .client-name {
+    max-width: 130px
+  }
+
+  .client-cell .cell-sub {
+    max-width: 150px;
+    overflow-wrap: anywhere
+  }
+}
+
+.row-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  min-width: 152px;
+  max-width: 205px
+}
+
+.row-actions .row-action {
+  width: auto;
+  height: auto;
+  min-height: 29px;
+  padding: 5px 8px;
+  border: 1px solid #dce5da;
+  border-radius: 5px;
+  background: #fff;
+  color: #305840;
+  font: 500 10px "Segoe UI", Arial, sans-serif;
+  white-space: nowrap
+}
+
+.row-actions [data-action="start"],
+.row-actions [data-action="complete"] {
+  background: #174c3c;
+  color: white;
+  border-color: #174c3c
+}
+
+.row-actions [data-action="cancel"] {
+  color: #9c473e
+}
+
+.row-actions .row-action:hover {
+  filter: brightness(.95)
+}
+
+@media(max-width:600px) {
+  td.delivery-actions:last-child {
+    position: static;
+    grid-column: 1/-1;
+    grid-row: 4;
+    padding: 12px 0 0;
+    margin-top: 10px;
+    border-top: 1px solid var(--line)
+  }
+
+  .row-actions {
+    max-width: none;
+    min-width: 0;
+    gap: 7px
+  }
+
+  .row-actions .row-action {
+    min-height: 34px;
+    font-size: 11px
+  }
+
+  .delivery-actions:before {
+    content: "AÇÕES";
+    display: block;
+    font-size: 8px;
+    color: #798d7e;
+    letter-spacing: 1px;
+    margin-bottom: 8px
+  }
+}

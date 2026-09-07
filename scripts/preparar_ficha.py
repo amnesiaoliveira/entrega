@@ -56,4 +56,10 @@ source = source.replace(
     }
   </style>""",
 )
+source = "{% load static %}\n" + source
+source = source.replace("Imprimir meia folha A4", "Imprimir ficha compacta (A6)")
+source = source.replace(
+    "</head>",
+    '<link rel="stylesheet" href="{% static \'ficha-compacta.css\' %}">\n</head>',
+)
 (ROOT / "templates/entregas/ficha.html").write_text(source, encoding="utf-8")

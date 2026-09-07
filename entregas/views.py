@@ -171,6 +171,14 @@ def detalhe(request, pk):
             }
             if proximo not in permitidos[entrega.status]:
                 return JsonResponse({"erro": "Mudança de status inválida."}, status=400)
+            if proximo == Entrega.Status.EM_ROTA and "responsavel" in dados:
+                responsavel = dados["responsavel"]
+                if not isinstance(responsavel, str) or len(responsavel.strip()) > 100:
+                    return JsonResponse(
+                        {"erro": "Informe um entregador com até 100 caracteres."},
+                        status=400,
+                    )
+                entrega.responsavel = responsavel.strip()
             if proximo == Entrega.Status.EM_ROTA and not entrega.responsavel:
                 return JsonResponse(
                     {"erro": "Informe o entregador antes de iniciar a rota."},
@@ -273,3 +281,49 @@ def service_worker(request):
     response["Cache-Control"] = "no-cache"
     response["Service-Worker-Allowed"] = "/"
     return response
+
+
+@login_required
+@never_cache
+@require_GET
+def roteiro(request):
+    try:
+        valores = request.GET.get("ids", "").split(",")
+        if not 1 <= len(valores) <= 100 or any(
+            not valor.isascii() or not valor.isdigit() or len(valor) > 18
+            for valor in valores
+        ):
+            raise ValueError
+        ids = list(dict.fromkeys(int(valor) for valor in valores))
+        registros = Entrega.objects.in_bulk(ids)
+        if len(registros) != len(ids):
+            raise ValueError
+    except ValueError:
+        return render(
+            request,
+            "entregas/roteiro.html",
+            {"erro": "Selecione de 1 a 100 entregas existentes para emitir o roteiro."},
+            status=400,
+        )
+    entregas = [
+        registros[pk] for pk in ids if registros[pk].status == Entrega.Status.PENDENTE
+    ]
+    if not entregas:
+        return render(
+            request,
+            "entregas/roteiro.html",
+            {
+                "erro": "Nenhuma entrega pendente na seleção. Somente entregas pendentes podem compor o roteiro."
+            },
+            status=400,
+        )
+    return render(
+        request,
+        "entregas/roteiro.html",
+        {
+            "entregas": entregas,
+            "total_volumes": sum(entrega.volumes for entrega in entregas),
+            "emitido_em": timezone.now(),
+            "ignoradas": len(ids) - len(entregas),
+        },
+    )

@@ -24,6 +24,7 @@
   const today = $('.app-layout').dataset.hoje;
   const draftKey = `baranda.draft.${user}`;
   const state = {items: [], status: '', page: 1, request: 0, online: navigator.onLine, editing: null, detail: null, saving: false};
+  const selectedDeliveries = new Set();
   let timer;
   let confirmTask;
   const form = $('#delivery-form');
@@ -49,6 +50,8 @@
     $('#offline-banner').hidden = online;
     $('#export').disabled = !online;
     $('#save-delivery').disabled = !online || state.saving;
+    $('#emit-route').disabled = !online || selectedDeliveries.size === 0;
+    document.querySelectorAll('[data-online-action]').forEach((button) => { button.disabled = !online; });
   }
   async function api(url, options = {}) {
     const csrf = document.cookie.split('; ').find((item) => item.startsWith('csrftoken='))?.slice(10);
@@ -131,6 +134,18 @@
       const initials = item.nome.trim().split(/\s+/).slice(0, 2).map((word) => word[0]).join('').toUpperCase();
       return `<tr><td><div class="client-cell"><span class="client-avatar">${escape(initials)}</span><div><span class="client-name">${escape(item.nome)}</span><span class="cell-sub">#${item.sequencia} <span aria-hidden="true">·</span> Cupom ${escape(item.cupom)}</span></div></div></td><td class="address-cell"><span class="address-text" title="${escape(item.endereco)}">${escape(item.endereco)}</span><span class="cell-sub">${item.data.split('-').reverse().join('/')} ${item.horario ? `· ${item.horario}` : '· Sem horário'}</span></td><td><span class="volumes">${icon('box')} ${item.volumes} ${item.volumes === 1 ? 'volume' : 'volumes'}</span></td><td><span class="courier">${item.responsavel ? '<i class="dot"></i>' : ''}${escape(item.responsavel || 'A definir')}</span></td><td>${badge(item.status)}</td><td><button class="icon-button row-open" data-id="${item.id}" aria-label="Abrir entrega ${item.sequencia}" title="Ver detalhes">↗</button></td></tr>`;
     }).join('');
+    $('#delivery-list').querySelectorAll('.client-cell').forEach((cell, index) => {
+      const checkbox = document.createElement('input');
+      checkbox.type = 'checkbox';
+      checkbox.className = 'delivery-select';
+      checkbox.dataset.selectionId = visible[index].id;
+      checkbox.setAttribute('aria-label', `Selecionar entrega ${visible[index].sequencia}`);
+      cell.prepend(checkbox);
+      const actions = cell.closest('tr').lastElementChild;
+      actions.className = 'delivery-actions';
+      actions.innerHTML = deliveryActions(visible[index]);
+    });
+    updateSelection();
     $('#empty-state').hidden = filtered.length !== 0;
     $('#empty-description').textContent = state.status || $('#search').value ? 'Tente outro status, data ou termo de busca.' : 'Cadastre a primeira entrega e comece a organizar o dia.';
     $('#showing').textContent = filtered.length ? `Mostrando ${start + 1}–${start + visible.length} de ${filtered.length} entregas` : 'Nenhuma entrega encontrada';
@@ -139,6 +154,54 @@
     $('#next').disabled = state.page === pages;
     $('#couriers').innerHTML = [...new Set(state.items.map((item) => item.responsavel).filter(Boolean))].map((name) => `<option value="${escape(name)}"></option>`).join('');
   }
+  function deliveryActions(item) {
+    const button = (action, label) => `<button type="button" class="row-action" data-online-action data-action="${action}" data-id="${item.id}" ${state.online ? '' : 'disabled'}>${label}</button>`;
+    let actions = `<button type="button" class="row-action row-open" data-action="details" data-id="${item.id}" aria-label="Abrir entrega ${item.sequencia}">Detalhes</button>`;
+    if (item.status === 'pendente') actions += button('start', 'Iniciar rota →');
+    if (item.status === 'em_rota') actions += button('print', 'Imprimir ficha') + button('edit', 'Editar') + button('cancel', 'Cancelar') + button('complete', 'Confirmar entrega ✓');
+    return `<div class="row-actions">${actions}</div>`;
+  }
+  function updateSelection() {
+    const boxes = [...document.querySelectorAll('.delivery-select')];
+    for (const checkbox of boxes) {
+      checkbox.checked = selectedDeliveries.has(Number(checkbox.dataset.selectionId));
+      checkbox.closest('tr').classList.toggle('selected-delivery', checkbox.checked);
+    }
+    const checked = boxes.filter((checkbox) => checkbox.checked).length;
+    $('#select-page').checked = boxes.length > 0 && checked === boxes.length;
+    $('#select-page').indeterminate = checked > 0 && checked < boxes.length;
+    $('#select-page').disabled = boxes.length === 0;
+    $('#selection-count').textContent = selectedDeliveries.size ? `${selectedDeliveries.size} selecionada(s), incluindo outras páginas e filtros. O roteiro incluirá apenas pendentes.` : 'Nenhuma selecionada';
+    $('#clear-selection').disabled = selectedDeliveries.size === 0;
+    $('#emit-route').disabled = !state.online || selectedDeliveries.size === 0;
+  }
+  $('#delivery-list').addEventListener('change', (event) => {
+    const checkbox = event.target.closest('.delivery-select');
+    if (!checkbox) return;
+    const id = Number(checkbox.dataset.selectionId);
+    if (checkbox.checked && selectedDeliveries.size >= 100) {
+      toast('Selecione no máximo 100 entregas por roteiro.');
+    } else if (checkbox.checked) selectedDeliveries.add(id);
+    else selectedDeliveries.delete(id);
+    updateSelection();
+  });
+  $('#select-page').addEventListener('change', (event) => {
+    const ids = [...document.querySelectorAll('.delivery-select')].map((checkbox) => Number(checkbox.dataset.selectionId));
+    if (event.target.checked && new Set([...selectedDeliveries, ...ids]).size > 100) {
+      toast('Selecione no máximo 100 entregas por roteiro.');
+    } else {
+      for (const id of ids) {
+        if (event.target.checked) selectedDeliveries.add(id);
+        else selectedDeliveries.delete(id);
+      }
+    }
+    updateSelection();
+  });
+  $('#clear-selection').addEventListener('click', () => { selectedDeliveries.clear(); updateSelection(); });
+  $('#emit-route').addEventListener('click', () => {
+    if (!state.online || selectedDeliveries.size === 0) return;
+    window.open(`/roteiro/?${new URLSearchParams({ids: [...selectedDeliveries].join(',')})}`, '_blank', 'noopener,noreferrer');
+  });
   function formatPhone(value) {
     const digits = value.replace(/\D/g, '');
     if (!digits) return '';
@@ -241,11 +304,8 @@
       const field = (name, value, full = false) => `<div class="${full ? 'full' : ''}"><dt>${name}</dt><dd>${escape(value || 'Não informado')}</dd></div>`;
       const digits = item.telefone.replace(/[^\d+]/g, '');
       $('#detail-content').innerHTML = `${badge(item.status)}<h3 class="detail-name">${escape(item.nome)}</h3><div class="detail-links"><a href="tel:${escape(digits)}">Ligar para o cliente</a><a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(item.endereco)}" target="_blank" rel="noopener noreferrer">Abrir endereço no mapa ↗</a></div><dl class="detail-grid">${field('Endereço completo', item.endereco, true)}${field('Telefone', item.telefone)}${field('Número do cupom', item.cupom)}${field('Volumes', item.volumes)}${field('Entregador', item.responsavel)}${field('Data da entrega', item.data.split('-').reverse().join('/'))}${field('Horário previsto', item.horario)}${field('Observações', item.observacoes, true)}</dl><h3 class="form-section">Histórico da entrega</h3><ol class="timeline">${result.eventos.map((entry) => `<li>${escape(entry.descricao)}<small>${escape(entry.usuario)} · ${new Date(entry.criado_em).toLocaleString('pt-BR')}</small></li>`).join('') || '<li>Histórico disponível com conexão.</li>'}</ol>`;
-      const active = ['pendente', 'em_rota'].includes(item.status);
-      $('#detail-actions').innerHTML = state.online ? `<a class="button secondary" href="/entregas/${item.id}/ficha/" target="_blank" rel="noopener">Imprimir ficha</a>${active ? '<button class="button secondary" id="edit-item">Editar</button><button class="button secondary" id="cancel-item">Cancelar entrega</button>' : ''}${item.status === 'pendente' ? '<button class="button primary" id="advance-item">Iniciar rota →</button>' : item.status === 'em_rota' ? '<button class="button primary" id="advance-item">Confirmar entrega ✓</button>' : ''}` : '<span class="muted">Conecte-se para alterar ou imprimir a entrega.</span>';
-      $('#edit-item')?.addEventListener('click', () => { $('#detail-dialog').close(); openForm(item); });
-      $('#cancel-item')?.addEventListener('click', () => confirmStatus(item, 'cancelada'));
-      $('#advance-item')?.addEventListener('click', () => confirmStatus(item, item.status === 'pendente' ? 'em_rota' : 'entregue'));
+      $('#detail-actions').innerHTML = '<button type="button" class="button secondary" id="close-details">Fechar</button>';
+      $('#close-details').addEventListener('click', () => $('#detail-dialog').close());
       if (!$('#detail-dialog').open) $('#detail-dialog').showModal();
     } catch (error) { toast(error.message); }
   }
@@ -253,9 +313,13 @@
     $('#confirm-title').textContent = status === 'cancelada' ? 'Cancelar esta entrega?' : status === 'em_rota' ? 'Tudo pronto para sair?' : 'Confirmar recebimento?';
     $('#confirm-message').textContent = status === 'cancelada' ? `A entrega #${item.sequencia} será encerrada como cancelada. O registro será mantido no histórico.` : status === 'em_rota' ? `Confirme o endereço, os ${item.volumes} volume(s) e o entregador antes de iniciar a rota.` : `Confirme que ${item.nome} recebeu os ${item.volumes} volume(s). Esta ação finaliza a entrega.`;
     $('#confirm-error').hidden = true;
+    $('#route-courier-field').hidden = status !== 'em_rota';
+    $('#route-courier').value = item.responsavel || '';
     $('#confirm-action').classList.toggle('danger', status === 'cancelada');
     confirmTask = async () => {
-      await api(`/api/entregas/${item.id}/`, {method: 'PATCH', body: JSON.stringify({status, versao: item.versao})});
+      const payload = {status, versao: item.versao};
+      if (status === 'em_rota') payload.responsavel = $('#route-courier').value.trim();
+      await api(`/api/entregas/${item.id}/`, {method: 'PATCH', body: JSON.stringify(payload)});
       $('#confirm-dialog').close();
       $('#detail-dialog').close();
       toast(`Entrega #${item.sequencia}: ${labels[status].toLowerCase()}.`);
@@ -278,9 +342,29 @@
   document.querySelectorAll('[data-status]').forEach((button) => button.addEventListener('click', () => chooseStatus(button.dataset.status)));
   $('#new-delivery').addEventListener('click', () => openForm());
   $('#empty-new').addEventListener('click', () => openForm());
-  $('#delivery-list').addEventListener('click', (event) => {
+  $('#delivery-list').addEventListener('click', async (event) => {
     const button = event.target.closest('[data-id]');
-    if (button) showDetail(Number(button.dataset.id));
+    if (!button) return;
+    const id = Number(button.dataset.id);
+    const action = button.dataset.action;
+    if (action === 'details') { showDetail(id); return; }
+    if (!state.online) return;
+    if (action === 'print') {
+      window.open(`/entregas/${id}/ficha/`, '_blank', 'noopener,noreferrer');
+      return;
+    }
+    button.disabled = true;
+    try {
+      const {entrega: item} = await api(`/api/entregas/${id}/`);
+      if (item.status !== (action === 'start' ? 'pendente' : 'em_rota')) {
+        toast('O status desta entrega mudou. A lista será atualizada.');
+        await load();
+        return;
+      }
+      if (action === 'edit') openForm(item);
+      else confirmStatus(item, {start: 'em_rota', cancel: 'cancelada', complete: 'entregue'}[action]);
+    } catch (error) { toast(error.message); }
+    finally { button.disabled = !state.online; }
   });
   $('#previous').addEventListener('click', () => { state.page--; render(); });
   $('#next').addEventListener('click', () => { state.page++; render(); });

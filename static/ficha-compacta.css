@@ -1,0 +1,34 @@
+/* Ficha individual: um quarto de A4, sem alturas que cortem dados longos. */
+body{padding:16px;min-height:0}
+.toolbar,.delivery-form{width:min(560px,100%)}
+.delivery-form{padding:20px 24px}
+.eyebrow{font-size:10px;margin-bottom:5px}
+h1{font-size:25px}
+.subtitle{font-size:12px;margin:6px 0 10px}
+.section{margin-top:10px}
+.section-title{grid-template-columns:20px max-content 1fr;gap:7px;margin-bottom:8px}
+.section-name,.section-number{font-size:11px}
+.field{margin-bottom:8px}
+label{font-size:10px;margin-bottom:4px}
+input{height:32px;padding:5px 8px;font-size:12px}
+.address-value{min-height:0;padding:6px 8px;font-size:12px;line-height:1.3}
+.helper{display:none}
+.delivery-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.footer-note{font-size:10px;margin-top:8px;padding-top:8px;overflow-wrap:anywhere}
+@page{size:148mm 105mm;margin:6mm}
+@media print{
+  html,body{width:auto;height:auto;min-height:0;margin:0;padding:0;background:#fff}
+  .delivery-form{width:100%;height:auto;min-height:0;padding:0;overflow:visible;box-shadow:none}
+  .eyebrow{font-size:8pt;margin:0 0 1mm}
+  h1{font-size:16pt;line-height:1.1}
+  .subtitle{font-size:8pt;margin:1mm 0 2mm}
+  .section{margin-top:2mm}
+  .section-title{grid-template-columns:5mm max-content 1fr;gap:1mm;margin-bottom:1.5mm}
+  .section-number,.section-name{font-size:8pt}
+  .field{margin-bottom:1.5mm;break-inside:avoid}
+  label{font-size:7pt;margin:0 0 .7mm}
+  .print-value,.address-value{display:block;min-height:0;padding:1mm 1.5mm;font-size:9pt;line-height:1.2;overflow-wrap:anywhere}
+  .delivery-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:2mm}
+  .footer-note{font-size:7pt;line-height:1.25;margin-top:1.5mm;padding-top:1.5mm}
+  input{display:none}
+}

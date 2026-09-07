@@ -8,5 +8,6 @@ urlpatterns = [
     path("api/entregas/<int:pk>/", views.detalhe, name="detalhe"),
     path("entregas/<int:pk>/ficha/", views.ficha, name="ficha"),
     path("exportar/", views.exportar, name="exportar"),
+    path("roteiro/", views.roteiro, name="roteiro"),
     path("sw.js", views.service_worker, name="service-worker"),
 ]
