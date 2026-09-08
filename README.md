@@ -64,7 +64,7 @@ Somente os registros da última consulta estão disponíveis offline, inclusive 
 
 ## Producao local no Windows
 
-Consulte [PRODUCAO.md](PRODUCAO.md) para usar instalador.ps1, importar o banco existente, configurar servico, backup diario, restauracao e HTTPS. Versao: **1.0.1**; veja [CHANGELOG.md](CHANGELOG.md).
+Consulte [PRODUCAO.md](PRODUCAO.md) para usar instalador.ps1, importar o banco existente, configurar servico, backup diario, restauracao e HTTPS. Versao: **1.0.2**; veja [CHANGELOG.md](CHANGELOG.md).
 
 ## Validação
 

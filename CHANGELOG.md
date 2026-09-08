@@ -1,5 +1,14 @@
 # Histórico de versões
 
+## 1.0.2 — 2026-09-07
+
+- Menu lateral recolhível pelo botão ao lado de Operação, preservando os ícones de navegação.
+- Preferência salva no navegador e mantida ao recarregar ou retornar ao painel.
+- Rótulos acessíveis, nomes dos menus ao passar o mouse e layout compacto preservado no celular.
+- Quatro testes de navegador aprovados, incluindo recolhimento, expansão e persistência da preferência.
+
+Atualize pelo instalador com os mesmos parâmetros da instalação anterior, sem `-ImportarBanco`. Esta versão não adiciona migrações de banco.
+
 ## 1.0.1 — 2026-09-07
 
 - Instalador adaptado ao PowerShell 4.0 e à plataforma Windows Server 2012 R2.

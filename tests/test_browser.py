@@ -18,6 +18,40 @@ RESULTS = Path(__file__).resolve().parent.parent / "test-results"
 
 @override_settings(PASSWORD_HASHERS=["django.contrib.auth.hashers.MD5PasswordHasher"])
 class TestNavegador(StaticLiveServerTestCase):
+    def test_menu_lateral_recolhe_e_preserva_preferencia(self):
+        get_user_model().objects.create_user("menu", password="Senha-teste-482!")
+        with sync_playwright() as playwright:
+            browser = playwright.chromium.launch()
+            page = browser.new_page(viewport={"width": 1280, "height": 800})
+            page.goto(self.live_server_url)
+            page.get_by_label("Usuário", exact=True).fill("menu")
+            page.get_by_label("Senha", exact=True).fill("Senha-teste-482!")
+            page.get_by_role("button", name="Entrar no painel").click()
+            sidebar = page.locator(".sidebar")
+            expect(sidebar).to_have_css("width", "242px")
+            page.get_by_role("button", name="Recolher menu lateral").click()
+            expect(sidebar).to_have_css("width", "76px")
+            expect(page.locator("#sidebar-toggle")).to_have_attribute(
+                "aria-expanded", "false"
+            )
+            page.get_by_role("button", name="Todas as entregas", exact=True).click()
+            page.reload()
+            expect(sidebar).to_have_css("width", "76px")
+            page.get_by_role("link", name="Entregadores", exact=True).click()
+            page.get_by_role("link", name="Controle de entregas").click()
+            expect(sidebar).to_have_css("width", "76px")
+            RESULTS.mkdir(exist_ok=True)
+            page.screenshot(path=str(RESULTS / "sidebar-recolhido.png"))
+            page.set_viewport_size({"width": 800, "height": 900})
+            page.get_by_role("button", name="Expandir menu lateral").click()
+            expect(sidebar).to_have_css("width", "242px")
+            page.set_viewport_size({"width": 390, "height": 844})
+            expect(page.locator("#sidebar-toggle")).to_be_hidden()
+            assert page.evaluate("document.documentElement.scrollWidth <= innerWidth")
+            page.set_viewport_size({"width": 1280, "height": 800})
+            expect(sidebar).to_have_css("width", "242px")
+            browser.close()
+
     def test_cadastro_entregador_e_selecao_na_entrega(self):
         get_user_model().objects.create_user("cadastro", password="Senha-teste-482!")
         RESULTS.mkdir(exist_ok=True)
