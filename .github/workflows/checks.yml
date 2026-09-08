@@ -9,6 +9,8 @@ jobs:
         with:
           enable-cache: true
       - run: uv sync --locked
+      - run: uv export --locked --no-dev --no-emit-project --format requirements-txt --output-file requirements-production.txt
+      - run: git diff --exit-code -- requirements-production.txt
       - run: uv run playwright install --with-deps chromium
       - run: uv run python manage.py collectstatic --noinput
       - run: uv run ruff check .
@@ -27,3 +29,6 @@ jobs:
           $errors = $null
           [System.Management.Automation.Language.Parser]::ParseFile("$PWD\instalador.ps1", [ref]$tokens, [ref]$errors) | Out-Null
           if ($errors.Count) { $errors | Format-List; exit 1 }
+      - name: Verificar plataformas aceitas pelo instalador
+        shell: powershell
+        run: .\tests\verificar_instalador.ps1

@@ -4,7 +4,7 @@ Aplicação PWA em português para organizar as entregas da loja, com Django, SQ
 
 ## Executar no Windows (desenvolvimento)
 
-Pré-requisitos: [uv](https://docs.astral.sh/uv/getting-started/installation/) e Python 3.14. O uv pode instalar o Python necessário automaticamente.
+Pré-requisitos: [uv](https://docs.astral.sh/uv/getting-started/installation/) e Python 3.12. O uv pode instalar o Python necessário automaticamente.
 
 No PowerShell, dentro de `C:\entrega`:
 
@@ -64,7 +64,7 @@ Somente os registros da última consulta estão disponíveis offline, inclusive 
 
 ## Producao local no Windows
 
-Consulte [PRODUCAO.md](PRODUCAO.md) para usar instalador.ps1, importar o banco existente, configurar servico, backup diario, restauracao e HTTPS. Versao: **1.0.0**; veja [CHANGELOG.md](CHANGELOG.md).
+Consulte [PRODUCAO.md](PRODUCAO.md) para usar instalador.ps1, importar o banco existente, configurar servico, backup diario, restauracao e HTTPS. Versao: **1.0.1**; veja [CHANGELOG.md](CHANGELOG.md).
 
 ## Validação
 
@@ -89,7 +89,7 @@ Os ícones PNG já estão incluídos. Para regenerá-los após editar o SVG: `uv
 
 Consulte o [padrão de desenvolvimento Django + VS Code](PADRAO_PROJETOS_DJANGO.md).
 
-O domínio usa nomes em português, organizado no app `entregas`. As adaptações são Python 3.14, interface em JavaScript/CSS nativos, Playwright para testes de navegador, WhiteNoise para estáticos e Waitress para execução compatível com Windows. Ruff formata e verifica Python; os templates e os fluxos JavaScript são verificados pelo teste de navegador. O instalador e o procedimento de operacao estao em PRODUCAO.md.
+O domínio usa nomes em português, organizado no app `entregas`. As adaptações são Python 3.12, interface em JavaScript/CSS nativos, Playwright para testes de navegador, WhiteNoise para estáticos e Waitress para execução compatível com Windows. Ruff formata e verifica Python; os templates e os fluxos JavaScript são verificados pelo teste de navegador. O instalador e o procedimento de operacao estao em PRODUCAO.md.
 
 ## Tema visual
 

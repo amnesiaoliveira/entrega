@@ -1,8 +1,14 @@
-# Super Baranda 1.0.0 — instalação local no Windows
+# Super Baranda 1.0.1 — instalação local no Windows
 
 ## Instalar
 
-Use Windows x64 com PowerShell 5.1 ou superior. Instale [uv](https://docs.astral.sh/uv/getting-started/installation/) com `winget install --id astral-sh.uv -e` e reabra o terminal. A instalação precisa de internet para baixar Python 3.14 e as dependências travadas em `uv.lock`; o serviço instalado não depende de internet, uv ou sessão de usuário aberta.
+O instalador usa PowerShell 4.0 ou superior e Python 3.12 x64, incluindo a plataforma Windows Server 2012 R2. Verifica Windows 8.1 / Server 2012 R2 (versão 6.3) ou posterior antes de alterar arquivos. Consulte os [requisitos do Python 3.12 para Windows](https://docs.python.org/3.12/using/windows.html).
+
+Não é necessário instalar uv ou winget no servidor. O instalador baixa o Python **3.12.10** de python.org com TLS 1.2, confere seu SHA256, instala-o para todos os usuários e prepara um ambiente virtual exclusivo. As dependências de produção são instaladas pelo pip com versões e hashes travados em `requirements-production.txt`, exportado de `uv.lock`. A instalação precisa de internet; o serviço instalado não depende de internet ou sessão de usuário aberta.
+
+Python 3.12.10 é o [último instalador oficial Windows da série 3.12](https://www.python.org/downloads/release/python-31210/); versões posteriores dessa série recebem correções de segurança como código-fonte. Para usar uma compilação 3.12 x64 mantida e compatível já instalada, informe `-PythonExecutavel 'C:\Python312\python.exe'`. O executável e suas bibliotecas precisam ser acessíveis à conta LocalService, fora do perfil privado de um usuário. Não substitua o Python por 3.13/3.14 no Server 2012 R2.
+
+A compatibilidade foi verificada no código e nos testes com Python 3.12.10 em Windows moderno; a instalação integral em Server 2012 R2 precisa ser validada no servidor de destino. Mantenha as atualizações do Windows, certificados raiz e Universal CRT em dia; falhas do instalador Python ficam em `logs\python-install.log`.
 
 Reserve um IP fixo para o servidor. Abra **PowerShell como Administrador**, entre na pasta extraída do projeto e execute, substituindo o IP pelo endereço real:
 

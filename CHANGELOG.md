@@ -1,5 +1,13 @@
 # Histórico de versões
 
+## 1.0.1 — 2026-09-07
+
+- Instalador adaptado ao PowerShell 4.0 e à plataforma Windows Server 2012 R2.
+- Python 3.12 no lugar de 3.14; criação da conta de segurança sem `::new()`.
+- Instalação automática do Python 3.12.10 com SHA256, sem exigir uv/winget no servidor.
+- Dependências de produção travadas com hashes para pip; opção de Python 3.12 externo.
+- Verificação da versão do Windows antes de alterações; documentação dos limites de suporte e validação no servidor de destino.
+
 ## 1.0.0 — 2026-09-07
 
 - Controle de entregas, histórico, filtros, CSV e ações conforme o status.

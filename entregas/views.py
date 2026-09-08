@@ -108,7 +108,7 @@ def lista(request):
         if not isinstance(dados, dict):
             raise ValueError
         requisicao = uuid.UUID(str(dados.get("requisicao", "")))
-    except ValueError, TypeError:
+    except (ValueError, TypeError):
         return JsonResponse({"erro": "Dados de cadastro inválidos."}, status=400)
     with transaction.atomic():
         existente = Entrega.objects.filter(requisicao=requisicao).first()
@@ -149,7 +149,7 @@ def detalhe(request, pk):
         dados = json.loads(request.body)
         if not isinstance(dados, dict):
             raise ValueError
-    except ValueError, TypeError:
+    except (ValueError, TypeError):
         return JsonResponse({"erro": "Dados inválidos."}, status=400)
     with transaction.atomic():
         entrega = get_object_or_404(Entrega.objects.select_for_update(), pk=pk)
@@ -182,7 +182,7 @@ def detalhe(request, pk):
                         candidato = Entregador.objects.filter(
                             pk=int(dados["entregador"]), ativo=True
                         ).first()
-                    except ValueError, TypeError, OverflowError:
+                    except (ValueError, TypeError, OverflowError):
                         candidato = None
                 elif "responsavel" in dados:
                     nome = dados["responsavel"]
@@ -391,7 +391,7 @@ def salvar_entregador(request, pk=None):
         dados = json.loads(request.body)
         if not isinstance(dados, dict) or not isinstance(dados.get("ativo"), bool):
             raise ValueError
-    except ValueError, TypeError:
+    except (ValueError, TypeError):
         return JsonResponse(
             {"erro": "Dados inválidos para o cadastro do entregador."}, status=400
         )

@@ -1,4 +1,4 @@
-#Requires -Version 5.1
+#Requires -Version 4.0
 <#
 .SYNOPSIS
 Instala/atualiza o Super Baranda no Windows x64 como servico e agenda backup diario.
@@ -15,6 +15,7 @@ param(
     [ValidatePattern('^([01][0-9]|2[0-3]):[0-5][0-9]$')][string]$HorarioBackup = '23:00',
     [ValidateRange(1, 3650)][int]$RetencaoDias = 30,
     [string]$ImportarBanco,
+    [string]$PythonExecutavel,
     [switch]$ProxyHttps
 )
 $ErrorActionPreference = 'Stop'
@@ -27,6 +28,13 @@ function Invoke-Checked {
     param([string]$Executable, [string[]]$Arguments)
     & $Executable @Arguments
     if ($LASTEXITCODE -ne 0) { throw "Falha em $Executable (codigo $LASTEXITCODE)." }
+}
+function Assert-SupportedWindows {
+    # Environment.OSVersion pode reportar uma versao antiga por compatibilidade do .NET.
+    $windows = Get-CimInstance -ClassName Win32_OperatingSystem
+    if ([version]$windows.Version -lt [version]'6.3') {
+        throw ('Windows nao compativel com Python 3.12: {0} ({1}). Use Windows Server 2012 R2 / Windows 8.1 ou posterior. Nenhum arquivo foi alterado.' -f $windows.Caption, $windows.Version)
+    }
 }
 function Protect-Directory {
     param([string]$Path, [string]$ServiceRights)
@@ -41,7 +49,8 @@ function Protect-Directory {
     Set-Acl -LiteralPath $Path -AclObject $acl
 }
 
-$administrator = [Security.Principal.WindowsPrincipal]::new([Security.Principal.WindowsIdentity]::GetCurrent())
+Assert-SupportedWindows
+$administrator = New-Object Security.Principal.WindowsPrincipal -ArgumentList ([Security.Principal.WindowsIdentity]::GetCurrent())
 if (-not $administrator.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
     throw 'Abra o PowerShell como Administrador para instalar servico, tarefa e regra de firewall.'
 }
@@ -80,11 +89,13 @@ if ($existing) {
     if (-not (Test-Path -LiteralPath $configPath)) { throw 'Configuracao da instalacao existente nao encontrada.' }
 }
 if ($ImportarBanco -and (Test-Path -LiteralPath $database)) { throw 'O banco de destino ja existe; a importacao nunca o substitui.' }
-$uvCommand = Get-Command uv -ErrorAction SilentlyContinue
-if (-not $uvCommand) { throw 'Instale uv antes: winget install --id astral-sh.uv -e. Reabra o PowerShell.' }
 # Verifica artefatos antes de parar qualquer servico.
-foreach ($item in @('config', 'entregas', 'templates', 'static', 'manage.py', 'servico.py', 'pyproject.toml', 'uv.lock', '.python-version', 'scripts\backup.py', 'nssm\win64\nssm.exe')) {
+foreach ($item in @('config', 'entregas', 'templates', 'static', 'manage.py', 'servico.py', 'pyproject.toml', 'requirements-production.txt', 'scripts\backup.py', 'nssm\win64\nssm.exe')) {
     if (-not (Test-Path -LiteralPath (Join-Path $source $item))) { throw "Arquivo do pacote ausente: $item" }
+}
+if ($PythonExecutavel) {
+    $PythonExecutavel = (Resolve-Path -LiteralPath $PythonExecutavel).Path
+    Invoke-Checked $PythonExecutavel @('-c', 'import sys, struct; sys.exit(0 if sys.version_info[:2] == (3, 12) and struct.calcsize(chr(80)) == 8 else 1)')
 }
 if ($ImportarBanco -and -not (Test-Path -LiteralPath $ImportarBanco -PathType Leaf)) { throw 'Banco de origem nao encontrado.' }
 if ($existing -and $existing.Status -ne 'Stopped') { Stop-Service $serviceName; (Get-Service $serviceName).WaitForStatus('Stopped', [TimeSpan]::FromSeconds(45)) }
@@ -107,15 +118,34 @@ foreach ($directory in @('config', 'entregas', 'templates', 'static')) {
     & robocopy (Join-Path $source $directory) (Join-Path $appPath $directory) /E /XD __pycache__ /XF '*.pyc' tests.py /NFL /NDL /NJH /NJS /NP | Out-Null
     if ($LASTEXITCODE -gt 7) { throw "Falha ao copiar $directory." }
 }
-foreach ($file in @('manage.py', 'servico.py', 'pyproject.toml', 'uv.lock', '.python-version')) {
+foreach ($file in @('manage.py', 'servico.py', 'pyproject.toml', 'requirements-production.txt')) {
     Copy-Item -LiteralPath (Join-Path $source $file) -Destination $appPath -Force
 }
 Copy-Item -LiteralPath (Join-Path $source 'scripts\backup.py') -Destination (Join-Path $appPath 'scripts\backup.py') -Force
 Copy-Item -LiteralPath (Join-Path $source 'nssm\win64\nssm.exe') -Destination $nssm -Force
-$env:UV_PYTHON_INSTALL_DIR = Join-Path $Destino 'python'
-$env:UV_PYTHON_PREFERENCE = 'only-managed'
-$env:UV_LINK_MODE = 'copy'
-Invoke-Checked $uvCommand.Source @('sync', '--project', $appPath, '--locked', '--no-dev', '--python', '3.14')
+if (-not $PythonExecutavel) {
+    $runtimePath = Join-Path $Destino 'python312'
+    $PythonExecutavel = Join-Path $runtimePath 'python.exe'
+    if (-not (Test-Path -LiteralPath $PythonExecutavel)) {
+        # Ultimo instalador oficial Windows da serie 3.12, compativel com Server 2012 R2.
+        $pythonInstaller = Join-Path $Destino 'python-3.12.10-amd64.exe'
+        [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12
+        Invoke-WebRequest 'https://www.python.org/ftp/python/3.12.10/python-3.12.10-amd64.exe' -OutFile $pythonInstaller -UseBasicParsing
+        if ((Get-FileHash -LiteralPath $pythonInstaller -Algorithm SHA256).Hash -ne '67B5635E80EA51072B87941312D00EC8927C4DB9BA18938F7AD2D27B328B95FB') {
+            throw 'O instalador Python baixado nao corresponde ao SHA256 esperado. Nada foi executado.'
+        }
+        $pythonInstallArguments = '/quiet InstallAllUsers=1 TargetDir="{0}" Include_launcher=0 Include_test=0 Include_doc=0 Include_tcltk=0 PrependPath=0 /log "{1}"' -f $runtimePath, (Join-Path $Dados 'logs\python-install.log')
+        $pythonInstallProcess = Start-Process -FilePath $pythonInstaller -ArgumentList $pythonInstallArguments -Wait -PassThru -WindowStyle Hidden
+        if ($pythonInstallProcess.ExitCode -eq 3010) { throw 'A instalacao Python requer reiniciar o Windows. Reinicie e execute este instalador novamente.' }
+        if ($pythonInstallProcess.ExitCode -ne 0) { throw "Falha na instalacao Python (codigo $($pythonInstallProcess.ExitCode)). Consulte logs\python-install.log." }
+        if (-not (Test-Path -LiteralPath $PythonExecutavel)) { throw 'Python ja instalado em outro local. Execute novamente com -PythonExecutavel apontando para o python.exe 3.12 x64 instalado para todos os usuarios.' }
+    }
+}
+Invoke-Checked $PythonExecutavel @('-c', 'import sys, struct; sys.exit(0 if sys.version_info[:2] == (3, 12) and struct.calcsize(chr(80)) == 8 else 1)')
+$venvPath = Join-Path $appPath '.venv'
+if (Test-Path -LiteralPath $python) { Invoke-Checked $PythonExecutavel @('-m', 'venv', '--upgrade', $venvPath) }
+else { Invoke-Checked $PythonExecutavel @('-m', 'venv', $venvPath) }
+Invoke-Checked $python @('-m', 'pip', 'install', '--disable-pip-version-check', '--require-hashes', '--only-binary=:all:', '--force-reinstall', '-r', (Join-Path $appPath 'requirements-production.txt'))
 if (Test-Path -LiteralPath $configPath) {
     $oldConfig = Get-Content -LiteralPath $configPath -Raw | ConvertFrom-Json
     if ($oldConfig.DJANGO_DATABASE_PATH -ne $database) { throw 'Caminho do banco diverge da configuracao existente.' }
