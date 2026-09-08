@@ -64,7 +64,7 @@ Somente os registros da última consulta estão disponíveis offline, inclusive 
 
 ## Producao local no Windows
 
-Consulte [PRODUCAO.md](PRODUCAO.md) para usar instalador.ps1, importar o banco existente, configurar servico, backup diario, restauracao e HTTPS. Versao: **1.0.2**; veja [CHANGELOG.md](CHANGELOG.md).
+Consulte [PRODUCAO.md](PRODUCAO.md) para usar instalador.ps1, importar o banco existente, configurar servico, backup diario, restauracao e HTTPS. Versao: **1.0.3**; veja [CHANGELOG.md](CHANGELOG.md).
 
 ## Validação
 
@@ -91,6 +91,18 @@ Consulte o [padrão de desenvolvimento Django + VS Code](PADRAO_PROJETOS_DJANGO.
 
 O domínio usa nomes em português, organizado no app `entregas`. As adaptações são Python 3.12, interface em JavaScript/CSS nativos, Playwright para testes de navegador, WhiteNoise para estáticos e Waitress para execução compatível com Windows. Ruff formata e verifica Python; os templates e os fluxos JavaScript são verificados pelo teste de navegador. O instalador e o procedimento de operacao estao em PRODUCAO.md.
 
+## Identificação por CPF
+
+O cadastro e a edição da entrega possuem CPF opcional, com máscara `000.000.000-00`. O banco armazena os 11 dígitos, preservando zeros à esquerda. O mesmo CPF pode aparecer em várias compras. Para localizar entregas anteriores, abra **Todas as entregas** e pesquise o CPF com ou sem pontuação; o documento também aparece nos detalhes. Registros antigos continuam sem CPF até serem preenchidos. A migração `0004_entrega_cpf` é aplicada pelo instalador nas próximas atualizações.
+
+Em uma nova entrega, o CPF aparece primeiro. Ao completar os 11 dígitos, o sistema consulta automaticamente a entrega cadastrada mais recentemente com esse documento e preenche nome, telefone e endereço. Revise os dados antes de salvar. Cupom, volumes e demais dados da compra não são reaproveitados. A consulta exige conexão; se o CPF não for encontrado, preencha os dados manualmente. A edição de uma entrega existente preserva seus dados históricos.
+
 ## Tema visual
 
 O tema compartilhado em static/theme.css aplica a referencia clinical-tech-styleguide.html: azul #0F52BA, fundo #F8FAFC, bordas suaves e fonte Inter local em static/fonts/, com licenca SIL OFL. As regras de tela preservam a impressao compacta em retrato.
+
+## Atualizar
+
+```powershell
+.\instalador.ps1 -HostsPermitidos '192.168.1.20,servidor'
+```

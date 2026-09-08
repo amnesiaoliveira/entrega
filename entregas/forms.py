@@ -29,10 +29,13 @@ class EntregadorForm(forms.ModelForm):
 
 
 class EntregaForm(forms.ModelForm):
+    cpf = forms.CharField(label="CPF", max_length=14, required=False)
+
     class Meta:
         model = Entrega
         fields = [
             "nome",
+            "cpf",
             "endereco",
             "telefone",
             "cupom",
@@ -44,6 +47,10 @@ class EntregaForm(forms.ModelForm):
         ]
 
     def __init__(self, data=None, *args, **kwargs):
+        instance = kwargs.get("instance")
+        if data is not None and "cpf" not in data and instance is not None:
+            data = data.copy()
+            data["cpf"] = instance.cpf
         # Aceita o nome enviado por versões anteriores da interface.
         if data is not None and "entregador" not in data and "responsavel" in data:
             data = data.copy()
@@ -81,3 +88,11 @@ class EntregaForm(forms.ModelForm):
         if volumes > 9999:
             raise forms.ValidationError("Informe no máximo 9.999 volumes.")
         return volumes
+
+    def clean_cpf(self):
+        cpf = self.cleaned_data["cpf"].strip()
+        if not cpf:
+            return ""
+        if not re.fullmatch(r"[0-9]{11}|[0-9]{3}\.[0-9]{3}\.[0-9]{3}-[0-9]{2}", cpf):
+            raise forms.ValidationError("Informe o CPF com 11 dígitos.")
+        return re.sub(r"\D", "", cpf)

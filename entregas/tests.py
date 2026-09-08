@@ -49,6 +49,100 @@ def cadastrar(cliente, dados):
     return cliente.post(reverse("lista"), dados, content_type="application/json")
 
 
+def test_consulta_cpf_usa_compra_mais_recente_e_somente_dados_cliente(cliente, dados):
+    dados["cpf"] = "012.345.678-90"
+    cadastrar(cliente, dados)
+    dados.update(
+        nome="Nome atualizado",
+        endereco="Endereço novo, 20",
+        requisicao=str(uuid.uuid4()),
+    )
+    cadastrar(cliente, dados)
+    dados.update(cpf="99999999999", nome="Outro cliente", requisicao=str(uuid.uuid4()))
+    cadastrar(cliente, dados)
+    for cpf in ("01234567890", "012.345.678-90"):
+        response = cliente.post(
+            reverse("cliente-por-cpf"), {"cpf": cpf}, content_type="application/json"
+        )
+        assert response.status_code == 200
+        assert response.json()["cliente"] == {
+            "cpf": "01234567890",
+            "nome": "Nome atualizado",
+            "endereco": "Endereço novo, 20",
+            "telefone": dados["telefone"],
+        }
+        assert "no-store" in response.headers["Cache-Control"]
+
+
+def test_consulta_cpf_desconhecido_invalido_e_acesso(cliente):
+    url = reverse("cliente-por-cpf")
+    assert cliente.post(
+        url, {"cpf": "01234567890"}, content_type="application/json"
+    ).json() == {"cliente": None}
+    assert (
+        cliente.post(url, {"cpf": "123"}, content_type="application/json").status_code
+        == 400
+    )
+    assert (
+        Client()
+        .post(url, {"cpf": "01234567890"}, content_type="application/json")
+        .status_code
+        == 401
+    )
+    csrf_client = Client(enforce_csrf_checks=True)
+    csrf_client.force_login(get_user_model().objects.get(username="operador"))
+    assert (
+        csrf_client.post(
+            url, {"cpf": "01234567890"}, content_type="application/json"
+        ).status_code
+        == 403
+    )
+
+
+@pytest.mark.parametrize("cpf", ["01234567890", "012.345.678-90", ""])
+def test_cpf_opcional_normalizado(cliente, dados, cpf):
+    dados["cpf"] = cpf
+    response = cadastrar(cliente, dados)
+    assert response.status_code == 201
+    assert response.json()["entrega"]["cpf"] == cpf.replace(".", "").replace("-", "")
+
+
+@pytest.mark.parametrize("cpf", ["123", "123456789012", "abc.def.ghi-jk"])
+def test_cpf_formato_incorreto_rejeitado(cliente, dados, cpf):
+    dados["cpf"] = cpf
+    assert cadastrar(cliente, dados).status_code == 400
+    assert not Entrega.objects.exists()
+
+
+def test_cpf_busca_historico_e_permite_compras_repetidas(cliente, dados):
+    dados["cpf"] = "012.345.678-90"
+    assert cadastrar(cliente, dados).status_code == 201
+    dados["requisicao"] = str(uuid.uuid4())
+    dados["data"] = (timezone.localdate() - timedelta(days=1)).isoformat()
+    assert cadastrar(cliente, dados).status_code == 201
+    dados["requisicao"] = str(uuid.uuid4())
+    dados["cpf"] = ""
+    assert cadastrar(cliente, dados).status_code == 201
+    for busca in ("01234567890", "012.345.678-90"):
+        response = cliente.get(reverse("lista"), {"data": "", "busca": busca})
+        assert len(response.json()["entregas"]) == 2
+
+
+def test_edicao_antiga_preserva_cpf_e_limpeza_explicita_remove(cliente, dados):
+    from .forms import EntregaForm
+
+    dados["cpf"] = "012.345.678-90"
+    cadastrar(cliente, dados)
+    entrega = Entrega.objects.get()
+    del dados["cpf"]
+    form = EntregaForm(dados, instance=entrega)
+    assert form.is_valid(), form.errors
+    assert form.save().cpf == "01234567890"
+    form = EntregaForm({**dados, "cpf": ""}, instance=entrega)
+    assert form.is_valid(), form.errors
+    assert form.save().cpf == ""
+
+
 def alterar(cliente, entrega, **dados):
     return cliente.patch(
         reverse("detalhe", args=[entrega["id"]]),

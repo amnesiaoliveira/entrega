@@ -1,4 +1,4 @@
-# Super Baranda 1.0.2 — instalação local no Windows
+# Super Baranda 1.0.3 — instalação local no Windows
 
 ## Instalar
 

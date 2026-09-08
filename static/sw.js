@@ -1,4 +1,4 @@
-const CACHE = 'baranda-shell-v2';
+const CACHE = 'baranda-shell-v3';
 const ASSETS = ['/static/offline.html', '/static/offline.js', '/static/app.css', '/static/theme.css', '/static/fonts/InterVariable.woff2',
   '/static/icons/icon.svg', '/static/icons/icon-192.png', '/static/icons/icon-512.png',
   '/static/icons/maskable-512.png', '/static/manifest.webmanifest'];

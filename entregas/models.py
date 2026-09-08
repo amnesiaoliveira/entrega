@@ -1,7 +1,7 @@
 import uuid
 
 from django.conf import settings
-from django.core.validators import MinValueValidator
+from django.core.validators import MinValueValidator, RegexValidator
 from django.db import models, transaction
 from django.utils import timezone
 
@@ -33,6 +33,13 @@ class Entrega(models.Model):
         CANCELADA = "cancelada", "Cancelada"
 
     nome = models.CharField("nome completo", max_length=150)
+    cpf = models.CharField(
+        "CPF",
+        max_length=11,
+        blank=True,
+        db_index=True,
+        validators=[RegexValidator(r"^[0-9]{11}$", "Informe os 11 dígitos do CPF.")],
+    )
     endereco = models.CharField("endereço completo", max_length=500)
     telefone = models.CharField("telefone", max_length=30)
     cupom = models.CharField("número do cupom", max_length=50)

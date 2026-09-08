@@ -10,6 +10,7 @@ urlpatterns = [
         "api/entregadores/<int:pk>/", views.editar_entregador, name="editar-entregador"
     ),
     path("api/entregas/", views.lista, name="lista"),
+    path("api/clientes/por-cpf/", views.cliente_por_cpf, name="cliente-por-cpf"),
     path("api/entregas/<int:pk>/", views.detalhe, name="detalhe"),
     path("entregas/<int:pk>/ficha/", views.ficha, name="ficha"),
     path("exportar/", views.exportar, name="exportar"),

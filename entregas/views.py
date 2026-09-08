@@ -1,5 +1,6 @@
 import csv
 import json
+import re
 import uuid
 from datetime import date
 from functools import wraps
@@ -40,6 +41,7 @@ def serializar(entrega):
             campo: getattr(entrega, campo)
             for campo in [
                 "nome",
+                "cpf",
                 "endereco",
                 "telefone",
                 "cupom",
@@ -57,6 +59,34 @@ def serializar(entrega):
     }
 
 
+@require_http_methods(["POST"])
+@api_login
+def cliente_por_cpf(request):
+    try:
+        dados = json.loads(request.body)
+        cpf = dados.get("cpf", "") if isinstance(dados, dict) else ""
+        if not isinstance(cpf, str) or not re.fullmatch(
+            r"[0-9]{11}|[0-9]{3}\.[0-9]{3}\.[0-9]{3}-[0-9]{2}", cpf
+        ):
+            raise ValueError
+    except (ValueError, TypeError):
+        return JsonResponse(
+            {"erro": "Informe o CPF completo com 11 dígitos."}, status=400
+        )
+    cpf = re.sub(r"\D", "", cpf)
+    # Histórico de compras, independentemente da data/status do painel.
+    entrega = Entrega.objects.filter(cpf=cpf).order_by("-criado_em", "-id").first()
+    cliente = (
+        {
+            campo: getattr(entrega, campo)
+            for campo in ("cpf", "nome", "telefone", "endereco")
+        }
+        if entrega
+        else None
+    )
+    return JsonResponse({"cliente": cliente})
+
+
 def selecionar(request):
     entregas = Entrega.objects.all()
     dia = request.GET.get("data", timezone.localdate().isoformat())
@@ -72,6 +102,10 @@ def selecionar(request):
         )
         if busca.lstrip("#").isdigit() and len(busca.lstrip("#")) < 18:
             filtro |= Q(numero_diario=int(busca.lstrip("#")))
+        if re.fullmatch(r"[0-9.\-\s]+", busca):
+            cpf = re.sub(r"\D", "", busca)
+            if cpf:
+                filtro |= Q(cpf__contains=cpf)
         entregas = entregas.filter(filtro)
     return entregas
 

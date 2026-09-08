@@ -10,7 +10,7 @@ function renderOffline() {
   const list = document.querySelector('#offline-list');
   list.replaceChildren();
   const query = document.querySelector('#offline-search').value.toLocaleLowerCase('pt-BR');
-  const items = (snapshot?.items || []).filter((item) => [item.nome, item.endereco, item.cupom, item.sequencia, item.responsavel].join(' ').toLocaleLowerCase('pt-BR').includes(query));
+  const items = (snapshot?.items || []).filter((item) => [item.nome, item.cpf, (item.cpf || '').replace(/^(\d{3})(\d{3})(\d{3})(\d{2})$/, '$1.$2.$3-$4'), item.endereco, item.cupom, item.sequencia, item.responsavel].join(' ').toLocaleLowerCase('pt-BR').includes(query));
   for (const item of items) {
     const card = document.createElement('article');
     card.className = 'offline-card';

@@ -128,7 +128,7 @@
       try { snapshot = JSON.parse(storage.get('baranda.offline')); } catch { snapshot = null; }
       if (!state.online && snapshot?.user === user) {
         const query = $('#search').value.trim().toLocaleLowerCase('pt-BR');
-        state.items = snapshot.items.filter((item) => (!$('#date').value || item.data === $('#date').value) && [item.nome, item.endereco, item.cupom, item.sequencia, item.responsavel].join(' ').toLocaleLowerCase('pt-BR').includes(query));
+        state.items = snapshot.items.filter((item) => (!$('#date').value || item.data === $('#date').value) && [item.nome, item.cpf, formatCpf(item.cpf), item.endereco, item.cupom, item.sequencia, item.responsavel].join(' ').toLocaleLowerCase('pt-BR').includes(query));
         $('#last-updated').textContent = `Cópia de ${new Date(snapshot.at).toLocaleString('pt-BR')}`;
         $('#offline-banner').textContent = 'Sem conexão. Exibindo somente entregas da última consulta salva neste dispositivo. Alterações precisam de conexão.';
       } else {
@@ -230,6 +230,69 @@
     if (!state.online || selectedDeliveries.size === 0) return;
     window.open(`/roteiro/?${new URLSearchParams({ids: [...selectedDeliveries].join(',')})}`, '_blank', 'noopener,noreferrer');
   });
+  function formatCpf(value = '') {
+    return value.replace(/\D/g, '').slice(0, 11)
+      .replace(/^(\d{3})(\d)/, '$1.$2')
+      .replace(/^(\d{3}\.\d{3})(\d)/, '$1.$2')
+      .replace(/^(\d{3}\.\d{3}\.\d{3})(\d)/, '$1-$2');
+  }
+  const cpfInput = form.elements.namedItem('cpf');
+  const customerFields = ['nome', 'telefone', 'endereco'];
+  let cpfTimer;
+  let cpfRequest = 0;
+  let filledCpf = '';
+  function cpfMessage(message = '') {
+    $('#cpf-status').textContent = message;
+    $('#cpf-status').hidden = !message;
+  }
+  async function lookupCustomer(cpf, request) {
+    if (state.editing || state.saving || !$('#delivery-dialog').open) return;
+    if (!state.online) {
+      cpfMessage('Sem conexão para consultar o CPF. Você pode preencher os dados manualmente.');
+      return;
+    }
+    const previous = Object.fromEntries(customerFields.map((key) => [key, form.elements.namedItem(key).value]));
+    cpfMessage('Buscando cliente…');
+    try {
+      const result = await api('/api/clientes/por-cpf/', {method: 'POST', body: JSON.stringify({cpf})});
+      if (request !== cpfRequest || state.saving || state.editing || !$('#delivery-dialog').open || cpfInput.value.replace(/\D/g, '') !== cpf) return;
+      if (!result.cliente) {
+        cpfMessage('CPF ainda não encontrado. Preencha os dados para a primeira entrega.');
+        return;
+      }
+      for (const key of customerFields) {
+        const input = form.elements.namedItem(key);
+        // Uma resposta atrasada não sobrescreve o que o operador acabou de digitar.
+        if (input.value === previous[key]) input.value = key === 'telefone' ? formatPhone(result.cliente[key]) : result.cliente[key];
+      }
+      filledCpf = cpf;
+      saveDraft();
+      cpfMessage('Cliente encontrado. Revise nome, telefone e endereço antes de salvar.');
+    } catch (error) {
+      if (request === cpfRequest && $('#delivery-dialog').open && !state.saving) cpfMessage(error.message);
+    }
+  }
+  cpfInput.addEventListener('input', () => {
+    const before = cpfInput.value.slice(0, cpfInput.selectionStart ?? cpfInput.value.length).replace(/\D/g, '').length;
+    cpfInput.value = formatCpf(cpfInput.value);
+    let cursor = 0;
+    let digits = 0;
+    while (cursor < cpfInput.value.length && digits < before) {
+      if (/\d/.test(cpfInput.value[cursor])) digits++;
+      cursor++;
+    }
+    cpfInput.setSelectionRange(cursor, cursor);
+    clearTimeout(cpfTimer);
+    const request = ++cpfRequest;
+    if (state.editing) return;
+    const cpf = cpfInput.value.replace(/\D/g, '');
+    if (filledCpf && filledCpf !== cpf) {
+      for (const key of customerFields) form.elements.namedItem(key).value = '';
+      filledCpf = '';
+    }
+    cpfMessage();
+    if (cpf.length === 11) cpfTimer = setTimeout(() => lookupCustomer(cpf, request), 250);
+  });
   function formatPhone(value) {
     const digits = value.replace(/\D/g, '');
     if (!digits) return '';
@@ -258,6 +321,10 @@
     phoneInput.setSelectionRange(cursor, cursor);
   });
   function openForm(item = null) {
+    clearTimeout(cpfTimer);
+    cpfRequest++;
+    filledCpf = '';
+    cpfMessage();
     state.editing = item;
     form.reset();
     $('#form-errors').hidden = true;
@@ -279,8 +346,10 @@
       if (form.elements.namedItem(key)) form.elements.namedItem(key).value = value ?? '';
     }
     phoneInput.value = formatPhone(phoneInput.value);
+    cpfInput.value = formatCpf(cpfInput.value);
     form.dataset.requisicao = values.requisicao || crypto.randomUUID();
     $('#delivery-dialog').showModal();
+    if (!item) cpfInput.focus();
   }
   function saveDraft() {
     if (!state.editing) {
@@ -291,6 +360,8 @@
   form.addEventListener('submit', async (event) => {
     event.preventDefault();
     if (state.saving) return;
+    clearTimeout(cpfTimer);
+    cpfRequest++;
     state.saving = true;
     $('#save-delivery').disabled = true;
     $('#save-delivery').textContent = 'Salvando…';
@@ -334,7 +405,7 @@
       $('#detail-title').textContent = `Entrega #${item.sequencia}`;
       const field = (name, value, full = false) => `<div class="${full ? 'full' : ''}"><dt>${name}</dt><dd>${escape(value || 'Não informado')}</dd></div>`;
       const digits = item.telefone.replace(/[^\d+]/g, '');
-      $('#detail-content').innerHTML = `${badge(item.status)}<h3 class="detail-name">${escape(item.nome)}</h3><div class="detail-links"><a href="tel:${escape(digits)}">Ligar para o cliente</a><a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(item.endereco)}" target="_blank" rel="noopener noreferrer">Abrir endereço no mapa ↗</a></div><dl class="detail-grid">${field('Endereço completo', item.endereco, true)}${field('Telefone', item.telefone)}${field('Número do cupom', item.cupom)}${field('Volumes', item.volumes)}${field('Entregador', item.responsavel)}${field('Data da entrega', item.data.split('-').reverse().join('/'))}${field('Horário previsto', item.horario)}${field('Observações', item.observacoes, true)}</dl><h3 class="form-section">Histórico da entrega</h3><ol class="timeline">${result.eventos.map((entry) => `<li>${escape(entry.descricao)}<small>${escape(entry.usuario)} · ${new Date(entry.criado_em).toLocaleString('pt-BR')}</small></li>`).join('') || '<li>Histórico disponível com conexão.</li>'}</ol>`;
+      $('#detail-content').innerHTML = `${badge(item.status)}<h3 class="detail-name">${escape(item.nome)}</h3><div class="detail-links"><a href="tel:${escape(digits)}">Ligar para o cliente</a><a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(item.endereco)}" target="_blank" rel="noopener noreferrer">Abrir endereço no mapa ↗</a></div><dl class="detail-grid">${field('Endereço completo', item.endereco, true)}${field('Telefone', item.telefone)}${field('CPF', formatCpf(item.cpf))}${field('Número do cupom', item.cupom)}${field('Volumes', item.volumes)}${field('Entregador', item.responsavel)}${field('Data da entrega', item.data.split('-').reverse().join('/'))}${field('Horário previsto', item.horario)}${field('Observações', item.observacoes, true)}</dl><h3 class="form-section">Histórico da entrega</h3><ol class="timeline">${result.eventos.map((entry) => `<li>${escape(entry.descricao)}<small>${escape(entry.usuario)} · ${new Date(entry.criado_em).toLocaleString('pt-BR')}</small></li>`).join('') || '<li>Histórico disponível com conexão.</li>'}</ol>`;
       $('#detail-actions').innerHTML = '<button type="button" class="button secondary" id="close-details">Fechar</button>';
       $('#close-details').addEventListener('click', () => $('#detail-dialog').close());
       if (!$('#detail-dialog').open) $('#detail-dialog').showModal();

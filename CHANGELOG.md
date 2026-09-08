@@ -1,5 +1,15 @@
 # Histórico de versões
 
+## 1.0.3 — 2026-09-08
+
+- CPF opcional com máscara, como primeiro campo da nova entrega.
+- Preenchimento automático de nome, telefone e endereço a partir da compra cadastrada mais recentemente com o CPF informado.
+- Busca no histórico por CPF com ou sem pontuação e exibição nos detalhes.
+- Consulta autenticada, preservação de alterações manuais feitas durante a busca e limpeza dos dados preenchidos ao trocar o CPF.
+- Migração `0004_entrega_cpf`: adiciona o campo sem alterar as entregas anteriores.
+
+Atualize com os mesmos parâmetros da instalação anterior, **sem `-ImportarBanco`**. O instalador cria backup antes de aplicar a migração. Após atualizar, recarregue a página com Ctrl + F5.
+
 ## 1.0.2 — 2026-09-07
 
 - Menu lateral recolhível pelo botão ao lado de Operação, preservando os ícones de navegação.

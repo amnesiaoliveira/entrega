@@ -18,6 +18,81 @@ RESULTS = Path(__file__).resolve().parent.parent / "test-results"
 
 @override_settings(PASSWORD_HASHERS=["django.contrib.auth.hashers.MD5PasswordHasher"])
 class TestNavegador(StaticLiveServerTestCase):
+    def test_cpf_primeiro_autopreenche_e_limpa_ao_trocar_cliente(self):
+        usuario = get_user_model().objects.create_user(
+            "autocpf", password="Senha-teste-482!"
+        )
+        Entrega.objects.create(
+            nome="Cliente recorrente",
+            cpf="01234567890",
+            endereco="Rua anterior, 42",
+            telefone="11999991234",
+            cupom="COMPRA-ANTERIOR",
+            volumes=5,
+            criado_por=usuario,
+        )
+        with sync_playwright() as playwright:
+            browser = playwright.chromium.launch()
+            page = browser.new_page()
+            page.goto(self.live_server_url)
+            page.get_by_label("Usuário", exact=True).fill("autocpf")
+            page.get_by_label("Senha", exact=True).fill("Senha-teste-482!")
+            page.get_by_role("button", name="Entrar no painel").click()
+            page.get_by_role("button", name="Nova entrega", exact=True).click()
+            expect(page.get_by_label("CPF", exact=True)).to_be_focused()
+            expect(
+                page.locator("#delivery-form .form-grid input").first
+            ).to_have_attribute("name", "cpf")
+            page.get_by_label("CPF", exact=True).fill("01234567890")
+            expect(page.get_by_label("Nome completo *", exact=True)).to_have_value(
+                "Cliente recorrente"
+            )
+            expect(page.get_by_label("Endereço completo *", exact=True)).to_have_value(
+                "Rua anterior, 42"
+            )
+            expect(page.get_by_label("Telefone *", exact=True)).to_have_value(
+                "(11) 99999-1234"
+            )
+            expect(page.get_by_label("Número do cupom *", exact=True)).to_be_empty()
+            expect(
+                page.get_by_label("Quantidade de volumes *", exact=True)
+            ).to_have_value("1")
+            page.get_by_label("CPF", exact=True).fill("99999999999")
+            expect(page.locator("#cpf-status")).to_contain_text(
+                "CPF ainda não encontrado"
+            )
+            expect(page.get_by_label("Nome completo *", exact=True)).to_be_empty()
+            expect(page.get_by_label("Endereço completo *", exact=True)).to_be_empty()
+            expect(page.get_by_label("Telefone *", exact=True)).to_be_empty()
+            browser.close()
+
+    def test_cpf_mascara_cadastro_busca_e_detalhes(self):
+        get_user_model().objects.create_user("cpf", password="Senha-teste-482!")
+        with sync_playwright() as playwright:
+            browser = playwright.chromium.launch()
+            page = browser.new_page(viewport={"width": 1280, "height": 800})
+            page.goto(self.live_server_url)
+            page.get_by_label("Usuário", exact=True).fill("cpf")
+            page.get_by_label("Senha", exact=True).fill("Senha-teste-482!")
+            page.get_by_role("button", name="Entrar no painel").click()
+            page.get_by_role("button", name="Nova entrega", exact=True).click()
+            page.get_by_label("CPF", exact=True).fill("01234567890")
+            expect(page.get_by_label("CPF", exact=True)).to_have_value("012.345.678-90")
+            page.get_by_label("Nome completo *", exact=True).fill("Cliente com CPF")
+            page.get_by_label("Endereço completo *", exact=True).fill(
+                "Rua do Teste, 10"
+            )
+            page.get_by_label("Telefone *", exact=True).fill("11999991234")
+            page.get_by_label("Número do cupom *", exact=True).fill("100")
+            page.get_by_role("button", name="Salvar entrega", exact=True).click()
+            expect(page.locator("#delivery-dialog")).not_to_be_visible()
+            for cpf in ("01234567890", "012.345.678-90"):
+                page.get_by_label("Buscar entregas", exact=True).fill(cpf)
+                expect(page.locator("#delivery-list tr")).to_have_count(1)
+            page.get_by_role("button", name="Abrir entrega 000001").click()
+            expect(page.locator("#detail-content")).to_contain_text("012.345.678-90")
+            browser.close()
+
     def test_menu_lateral_recolhe_e_preserva_preferencia(self):
         get_user_model().objects.create_user("menu", password="Senha-teste-482!")
         with sync_playwright() as playwright:
