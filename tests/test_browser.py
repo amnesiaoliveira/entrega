@@ -18,6 +18,56 @@ RESULTS = Path(__file__).resolve().parent.parent / "test-results"
 
 @override_settings(PASSWORD_HASHERS=["django.contrib.auth.hashers.MD5PasswordHasher"])
 class TestNavegador(StaticLiveServerTestCase):
+    @override_settings(
+        ALLOWED_HOSTS=["baranda.test", "localhost", "127.0.0.1", "testserver"]
+    )
+    def test_nova_entrega_em_http_na_rede_local(self):
+        get_user_model().objects.create_user("rede", password="Senha-teste-482!")
+        with sync_playwright() as playwright:
+            browser = playwright.chromium.launch(
+                args=[
+                    "--host-resolver-rules=MAP baranda.test 127.0.0.1",
+                    "--no-proxy-server",
+                ]
+            )
+            page = browser.new_page()
+            errors = []
+            page.on("pageerror", lambda error: errors.append(str(error)))
+            url = self.live_server_url.replace("localhost", "baranda.test").replace(
+                "127.0.0.1", "baranda.test"
+            )
+            page.goto(url)
+            assert page.evaluate("window.isSecureContext") is False
+            assert page.evaluate("typeof crypto.randomUUID") == "undefined"
+            page.get_by_label("Usuário", exact=True).fill("rede")
+            page.get_by_label("Senha", exact=True).fill("Senha-teste-482!")
+            page.get_by_role("button", name="Entrar no painel").click()
+            page.get_by_role("button", name="Nova entrega", exact=True).click()
+            expect(page.locator("#delivery-dialog"), str(errors)).to_be_visible()
+            request_id = page.locator("#delivery-form").get_attribute("data-requisicao")
+            assert uuid.UUID(request_id).version == 4
+            page.get_by_label("Nome completo *", exact=True).fill(
+                "Cliente da rede local"
+            )
+            page.get_by_label("Endereço completo *", exact=True).fill(
+                "Rua do Teste, 10"
+            )
+            page.get_by_label("Telefone *", exact=True).fill("11999991234")
+            page.get_by_label("Número do cupom *", exact=True).fill("101")
+            page.get_by_role("button", name="Salvar entrega", exact=True).click()
+            expect(page.locator("#delivery-dialog")).not_to_be_visible()
+            expect(page.locator("#delivery-list")).to_contain_text(
+                "Cliente da rede local"
+            )
+            page.get_by_role("button", name="Nova entrega", exact=True).click()
+            expect(page.locator("#delivery-dialog")).to_be_visible()
+            assert (
+                page.locator("#delivery-form").get_attribute("data-requisicao")
+                != request_id
+            )
+            assert errors == []
+            browser.close()
+
     def test_cpf_primeiro_autopreenche_e_limpa_ao_trocar_cliente(self):
         usuario = get_user_model().objects.create_user(
             "autocpf", password="Senha-teste-482!"

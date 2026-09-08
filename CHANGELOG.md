@@ -1,5 +1,13 @@
 # Histórico de versões
 
+## 1.0.4 — 2026-09-08
+
+- Corrige a abertura de Nova entrega em HTTP pelo nome/IP do servidor, onde `crypto.randomUUID()` não está disponível.
+- Gera UUID v4 com `crypto.getRandomValues()` nesse cenário, preservando a identificação de requisições e os rascunhos.
+- Teste de navegador em origem HTTP fora de localhost cobre abertura, cadastro e uma segunda nova entrega sem erros de JavaScript.
+
+Atualize pelo instalador e recarregue o navegador com Ctrl + F5. Não há novas migrações nesta versão.
+
 ## 1.0.3 — 2026-09-08
 
 - CPF opcional com máscara, como primeiro campo da nova entrega.
