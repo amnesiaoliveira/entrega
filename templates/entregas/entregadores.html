@@ -1,0 +1,17 @@
+{% extends 'base.html' %}{% load static %}
+{% block title %}Entregadores · Super Baranda{% endblock %}
+{% block head %}<link rel="stylesheet" href="{% static 'entregadores.css' %}">{% endblock %}
+{% block body %}
+<main class="courier-page">
+  <header class="courier-header"><a class="brand" href="/">super baranda</a><a class="button secondary" href="/">← Controle de entregas</a></header>
+  <div class="page-heading"><div><span class="eyebrow">EQUIPE DE ENTREGAS</span><h1>Entregadores<span>.</span></h1><p class="muted">Cadastre a equipe e mantenha os contatos atualizados.</p></div><button class="button primary" id="new-courier">+ Novo entregador</button></div>
+  <section class="deliveries-panel"><div class="filter-bar"><div class="search-field"><input id="courier-search" type="search" placeholder="Buscar por nome ou telefone…" aria-label="Buscar entregadores"></div><select id="courier-filter" aria-label="Situação dos entregadores"><option value="">Todos</option><option value="active">Ativos</option><option value="inactive">Inativos</option></select><button id="courier-refresh" class="button secondary">Atualizar</button></div>
+    <p class="form-error" id="courier-error" role="alert" hidden></p>
+    <div class="courier-table-wrap"><table class="courier-table"><thead><tr><th>NOME</th><th>TELEFONE</th><th>SITUAÇÃO</th><th>AÇÕES</th></tr></thead><tbody id="courier-list"></tbody></table></div>
+    <p class="empty-state" id="courier-empty">Carregando entregadores…</p><footer class="table-footer" id="courier-count"></footer>
+  </section><p class="muted courier-note">Somente entregadores ativos podem receber novas atribuições. A inativação preserva as entregas e o histórico.</p>
+</main>
+<dialog id="courier-dialog" aria-labelledby="courier-title"><form id="courier-form"><div class="dialog-heading"><h2 id="courier-title">Novo entregador</h2><button class="icon-button" type="button" data-close aria-label="Fechar">✕</button></div><div class="dialog-body"><div id="courier-form-error" class="form-error" role="alert" hidden></div><div class="form-grid"><label class="full">Nome completo *<input name="nome" maxlength="100" required autocomplete="name"></label><label class="full">Telefone<input name="telefone" type="tel" maxlength="15" autocomplete="tel" placeholder="(00) 00000-0000"></label><label class="full">Situação<select name="ativo"><option value="true">Ativo</option><option value="false">Inativo</option></select></label></div></div><div class="dialog-footer"><button class="button secondary" type="button" data-close>Voltar</button><button class="button primary" id="save-courier" type="submit">Salvar entregador</button></div></form></dialog>
+<div class="toast" id="courier-toast" role="status" hidden></div>
+{% endblock %}
+{% block scripts %}<script src="{% static 'entregadores.js' %}" defer></script>{% endblock %}

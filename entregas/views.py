@@ -15,8 +15,8 @@ from django.views.decorators.cache import never_cache
 from django.views.decorators.csrf import ensure_csrf_cookie
 from django.views.decorators.http import require_GET, require_http_methods
 
-from .forms import EntregaForm
-from .models import Entrega, EventoEntrega
+from .forms import EntregadorForm, EntregaForm
+from .models import Entrega, Entregador, EventoEntrega
 
 
 def api_login(view):
@@ -35,6 +35,7 @@ def serializar(entrega):
     return {
         "id": entrega.pk,
         "sequencia": entrega.sequencia,
+        "entregador": entrega.entregador_id,
         **{
             campo: getattr(entrega, campo)
             for campo in [
@@ -70,7 +71,7 @@ def selecionar(request):
             | Q(responsavel__icontains=busca)
         )
         if busca.lstrip("#").isdigit() and len(busca.lstrip("#")) < 18:
-            filtro |= Q(pk=int(busca.lstrip("#")))
+            filtro |= Q(numero_diario=int(busca.lstrip("#")))
         entregas = entregas.filter(filtro)
     return entregas
 
@@ -80,7 +81,9 @@ def selecionar(request):
 @ensure_csrf_cookie
 def inicio(request):
     return render(
-        request, "entregas/inicio.html", {"hoje": timezone.localdate().isoformat()}
+        request,
+        "entregas/inicio.html",
+        {"hoje": timezone.localdate().isoformat(), "fuso": settings.TIME_ZONE},
     )
 
 
@@ -96,6 +99,8 @@ def lista(request):
             {
                 "entregas": [serializar(item) for item in entregas],
                 "consultado_em": timezone.now().isoformat(),
+                "hoje": timezone.localdate().isoformat(),
+                "entregadores": list(Entregador.objects.values("id", "nome", "ativo")),
             }
         )
     try:
@@ -171,19 +176,34 @@ def detalhe(request, pk):
             }
             if proximo not in permitidos[entrega.status]:
                 return JsonResponse({"erro": "Mudança de status inválida."}, status=400)
-            if proximo == Entrega.Status.EM_ROTA and "responsavel" in dados:
-                responsavel = dados["responsavel"]
-                if not isinstance(responsavel, str) or len(responsavel.strip()) > 100:
+            if proximo == Entrega.Status.EM_ROTA:
+                if "entregador" in dados:
+                    try:
+                        candidato = Entregador.objects.filter(
+                            pk=int(dados["entregador"]), ativo=True
+                        ).first()
+                    except ValueError, TypeError, OverflowError:
+                        candidato = None
+                elif "responsavel" in dados:
+                    nome = dados["responsavel"]
+                    candidato = (
+                        Entregador.objects.filter(nome=nome.strip(), ativo=True).first()
+                        if isinstance(nome, str)
+                        else None
+                    )
+                else:
+                    candidato = Entregador.objects.filter(
+                        pk=entrega.entregador_id, ativo=True
+                    ).first()
+                if not candidato:
                     return JsonResponse(
-                        {"erro": "Informe um entregador com até 100 caracteres."},
+                        {
+                            "erro": "Selecione um entregador ativo e cadastrado antes de iniciar a rota."
+                        },
                         status=400,
                     )
-                entrega.responsavel = responsavel.strip()
-            if proximo == Entrega.Status.EM_ROTA and not entrega.responsavel:
-                return JsonResponse(
-                    {"erro": "Informe o entregador antes de iniciar a rota."},
-                    status=400,
-                )
+                entrega.entregador = candidato
+                entrega.responsavel = candidato.nome
             entrega.status = proximo
             if proximo == Entrega.Status.ENTREGUE:
                 entrega.entregue_em = timezone.now()
@@ -326,4 +346,75 @@ def roteiro(request):
             "emitido_em": timezone.now(),
             "ignoradas": len(ids) - len(entregas),
         },
+    )
+
+
+@login_required
+@never_cache
+@ensure_csrf_cookie
+def cadastro_entregadores(request):
+    return render(request, "entregas/entregadores.html")
+
+
+def dados_entregador(item):
+    return {
+        "id": item.pk,
+        "nome": item.nome,
+        "telefone": item.telefone,
+        "ativo": item.ativo,
+        "versao": item.versao,
+    }
+
+
+@require_http_methods(["GET", "POST"])
+@api_login
+def entregadores(request):
+    if request.method == "GET":
+        return JsonResponse(
+            {
+                "entregadores": [
+                    dados_entregador(item) for item in Entregador.objects.all()
+                ]
+            }
+        )
+    return salvar_entregador(request)
+
+
+@require_http_methods(["PATCH"])
+@api_login
+def editar_entregador(request, pk):
+    return salvar_entregador(request, pk)
+
+
+def salvar_entregador(request, pk=None):
+    try:
+        dados = json.loads(request.body)
+        if not isinstance(dados, dict) or not isinstance(dados.get("ativo"), bool):
+            raise ValueError
+    except ValueError, TypeError:
+        return JsonResponse(
+            {"erro": "Dados inválidos para o cadastro do entregador."}, status=400
+        )
+    with transaction.atomic():
+        item = (
+            get_object_or_404(Entregador.objects.select_for_update(), pk=pk)
+            if pk
+            else None
+        )
+        if item and dados.get("versao") != item.versao:
+            return JsonResponse(
+                {
+                    "erro": "Este cadastro foi alterado. Atualize a tabela e tente novamente."
+                },
+                status=409,
+            )
+        form = EntregadorForm(dados, instance=item)
+        if not form.is_valid():
+            return JsonResponse({"erros": form.errors}, status=400)
+        item = form.save(commit=False)
+        if pk:
+            item.versao += 1
+        item.save()
+    return JsonResponse(
+        {"entregador": dados_entregador(item)}, status=200 if pk else 201
     )

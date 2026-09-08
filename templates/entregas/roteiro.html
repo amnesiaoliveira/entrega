@@ -1,10 +1,11 @@
 {% load static %}
 <!doctype html>
 <html lang="pt-BR">
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Guia de roteiro de entrega · Super Baranda</title><link rel="stylesheet" href="{% static 'roteiro.css' %}"><link rel="stylesheet" href="{% static 'roteiro-compacto.css' %}"></head>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Guia de roteiro de entrega · Super Baranda</title><link rel="stylesheet" href="{% static 'roteiro.css' %}"><link rel="stylesheet" href="{% static 'roteiro-compacto.css' %}"><link rel="stylesheet" href="{% static 'theme.css' %}">
+</head>
 <body>
   <div class="toolbar"><a href="/">← Controle de entregas</a>{% if not erro %}<button type="button" id="print-route">Imprimir / salvar PDF</button>{% endif %}</div>
-  <main>
+  <main class="route-sheet">
     <header><p class="brand">SUPER BARANDA</p><h1>Guia de roteiro de entrega</h1>
     {% if erro %}<p role="alert">{{ erro }}</p>{% else %}
     <p>Emitida em {{ emitido_em|date:'d/m/Y H:i' }} · Por {{ request.user.get_full_name|default:request.user.username }}</p>
@@ -23,7 +24,7 @@
         <div class="receipt"><div>Recebido por: ______________ &nbsp; Hora: ___:___</div><div>Ass.: ______________ &nbsp; ☐ Entregue &nbsp; ☐ Não entregue</div></div>
       </article>
     {% endfor %}
-    </div><footer>Confira os endereços e os volumes antes da saída. Bom roteiro!</footer>{% endif %}
+    </div><footer>Confira os endereços e os volumes antes da saída. Boa Entrega!</footer>{% endif %}
   </main>
   <script src="{% static 'roteiro.js' %}" defer></script>
 </body></html>

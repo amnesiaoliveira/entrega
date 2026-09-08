@@ -309,6 +309,7 @@
     }
   </style>
 <link rel="stylesheet" href="{% static 'ficha-compacta.css' %}">
+<link rel="stylesheet" href="{% static 'theme.css' %}">
 </head>
 
 <body>
@@ -344,7 +345,7 @@
 
       <div class="field">
         <label for="telefone">Telefone</label>
-        <input id="telefone" name="telefone" type="tel" inputmode="tel" value="{{ entrega.telefone }}" readonly /><div class="print-value">{{ entrega.telefone }}</div>
+        <input id="telefone" name="telefone" type="tel" inputmode="tel" maxlength="15" value="{{ entrega.telefone }}" readonly /><div class="print-value">{{ entrega.telefone }}</div>
       </div>
     </section>
 

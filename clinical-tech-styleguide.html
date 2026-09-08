@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Guia de Estilo - Prontuário Eletrônico</title>
+    <!-- Google Fonts - Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Lucide Icons (Line Icons) -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        :root {
+            /* Paleta Clinical Tech */
+            --brand-primary: #0F52BA;
+            --bg-main: #F8FAFC;
+            --bg-card: #FFFFFF;
+            --text-main: #0F172A;
+            --text-muted: #64748B;
+            --border-color: #E2E8F0;
+
+            /* Cores de Status */
+            --status-success: #10B981;
+            --status-warning: #F59E0B;
+            --status-danger: #EF4444;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-main);
+            color: var(--text-main);
+            padding: 40px 20px;
+            line-height: 1.5;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        header {
+            margin-bottom: 40px;
+            border-bottom: 2px solid var(--border-color);
+            padding-bottom: 20px;
+        }
+
+        h1 {
+            font-size: 28px;
+            font-weight: 700;
+            color: var(--text-main);
+            margin-bottom: 8px;
+        }
+
+        .subtitle {
+            color: var(--text-muted);
+            font-size: 16px;
+        }
+
+        .section {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+
+        h2 {
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        /* Grid de Cores */
+        .color-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 20px;
+        }
+
+        .color-card {
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .color-swatch {
+            height: 80px;
+        }
+
+        .color-info {
+            padding: 12px;
+            font-size: 14px;
+        }
+
+        .color-name {
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        .color-hex {
+            font-family: monospace;
+            color: var(--text-muted);
+        }
+
+        /* Amostra de UI de Prontuário */
+        .patient-card {
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 20px;
+            margin-top: 15px;
+        }
+
+        .patient-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 15px;
+        }
+
+        .patient-info h3 {
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        .patient-meta {
+            font-size: 14px;
+            color: var(--text-muted);
+            margin-top: 4px;
+        }
+
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 12px;
+            border-radius: 9999px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .badge-danger {
+            background-color: #FEF2F2;
+            color: var(--status-danger);
+            border: 1px solid #FEE2E2;
+        }
+
+        .badge-success {
+            background-color: #ECFDF5;
+            color: var(--status-success);
+            border: 1px solid #D1FAE5;
+        }
+
+        .grid-2col {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        @media (max-width: 768px) {
+            .grid-2col { grid-template-columns: 1fr; }
+        }
+
+        .data-group {
+            margin-bottom: 12px;
+        }
+
+        .data-label {
+            font-size: 12px;
+            font-weight: 500;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 4px;
+        }
+
+        .data-value {
+            font-size: 15px;
+            color: var(--text-main);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        /* Menu / Abas */
+        .nav-tabs {
+            display: flex;
+            gap: 8px;
+            border-bottom: 1px solid var(--border-color);
+            margin-bottom: 20px;
+        }
+
+        .nav-link {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 16px;
+            text-decoration: none;
+            color: var(--text-muted);
+            font-size: 14px;
+            font-weight: 500;
+            border-bottom: 2px solid transparent;
+        }
+
+        .nav-link.active {
+            color: var(--brand-primary);
+            border-bottom-color: var(--brand-primary);
+        }
+
+        .icon-stroke-md svg {
+            stroke-width: 2px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <h1>Clinical Tech — Design System</h1>
+        <p class="subtitle">Padrão visual técnico para Aplicação de Prontuário Eletrônico</p>
+    </header>
+
+    <!-- Seção 1: Cores -->
+    <div class="section">
+        <h2><i data-lucide="palette"></i> Paleta de Cores (Variáveis CSS)</h2>
+        <div class="color-grid">
+            <div class="color-card">
+                <div class="color-swatch" style="background-color: #0F52BA;"></div>
+                <div class="color-info">
+                    <div class="color-name">Brand Primary</div>
+                    <div class="color-hex">#0F52BA</div>
+                </div>
+            </div>
+            <div class="color-card">
+                <div class="color-swatch" style="background-color: #F8FAFC;"></div>
+                <div class="color-info">
+                    <div class="color-name">Background</div>
+                    <div class="color-hex">#F8FAFC</div>
+                </div>
+            </div>
+            <div class="color-card">
+                <div class="color-swatch" style="background-color: #0F172A;"></div>
+                <div class="color-info">
+                    <div class="color-name">Text Main</div>
+                    <div class="color-hex">#0F172A</div>
+                </div>
+            </div>
+            <div class="color-card">
+                <div class="color-swatch" style="background-color: #64748B;"></div>
+                <div class="color-info">
+                    <div class="color-name">Text Muted</div>
+                    <div class="color-hex">#64748B</div>
+                </div>
+            </div>
+            <div class="color-card">
+                <div class="color-swatch" style="background-color: #EF4444;"></div>
+                <div class="color-info">
+                    <div class="color-name">Status Danger</div>
+                    <div class="color-hex">#EF4444</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Seção 2: Demonstração de UI -->
+    <div class="section icon-stroke-md">
+        <h2><i data-lucide="layout"></i> Exemplo Prático de Interface (Inter + Line Icons)</h2>
+
+        <!-- Navegação Simulação -->
+        <div class="nav-tabs">
+            <a href="#" class="nav-link active"><i data-lucide="user"></i> Paciente</a>
+            <a href="#" class="nav-link"><i data-lucide="activity"></i> Sinais Vitais</a>
+            <a href="#" class="nav-link"><i data-lucide="file-text"></i> Histórico</a>
+            <a href="#" class="nav-link"><i data-lucide="prescription"></i> Prescrições</a>
+        </div>
+
+        <!-- Card do Paciente -->
+        <div class="patient-card">
+            <div class="patient-header">
+                <div class="patient-info">
+                    <h3>Carlos Eduardo da Silva</h3>
+                    <div class="patient-meta">Reg: #449.102 • ID: 42 anos</div>
+                </div>
+                <div class="badge badge-danger">
+                    <i data-lucide="alert-triangle" style="width:14px; height:14px;"></i> Alergia: Penicilina
+                </div>
+            </div>
+
+            <div class="grid-2col">
+                <div class="data-group">
+                    <div class="data-label">Última Triagem</div>
+                    <div class="data-value">
+                        <i data-lucide="clock" style="color: var(--text-muted); width:18px;"></i>
+                        Hoje, às 14:32h
+                    </div>
+                </div>
+                <div class="data-group">
+                    <div class="data-label">Status do Atendimento</div>
+                    <div class="data-value">
+                        <span class="badge badge-success">
+                            <span style="width:6px; height:6px; background:var(--status-success); border-radius:50%;"></span> Em Aguardo de Exame
+                        </span>
+                    </div>
+                </div>
+                <div class="data-group">
+                    <div class="data-label">Frequência Cardíaca</div>
+                    <div class="data-value">
+                        <i data-lucide="heart" style="color: var(--status-danger); width:18px;"></i>
+                        <strong>78 bpm</strong> (Normal)
+                    </div>
+                </div>
+                <div class="data-group">
+                    <div class="data-label">Médico Responsável</div>
+                    <div class="data-value">
+                        <i data-lucide="stethoscope" style="color: var(--brand-primary); width:18px;"></i>
+                        Dr. André Rocha (CRM 12345)
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Inicializa os ícones do Lucide
+    lucide.createIcons();
+</script>
+</body>
+</html>

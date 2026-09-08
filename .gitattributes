@@ -1,0 +1,11 @@
+# O arquivo-fonte do GitHub contém apenas o necessário para instalar e operar.
+.github/ export-ignore
+.vscode/ export-ignore
+tests/ export-ignore
+entregas/tests.py export-ignore
+clinical-tech-styleguide.html export-ignore
+template_controle_entrega.html export-ignore
+PADRAO_PROJETOS_DJANGO.md export-ignore
+scripts/gerar_icones.py export-ignore
+scripts/preparar_ficha.py export-ignore
+iniciar.ps1 export-ignore

@@ -1,7 +1,9 @@
 """Teste real em Chromium; usa banco isolado do Django, nunca o banco da loja."""
 
 import uuid
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
+from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
 from django.contrib.staticfiles.testing import StaticLiveServerTestCase
@@ -9,12 +11,96 @@ from django.test import override_settings
 from django.utils import timezone
 from playwright.sync_api import expect, sync_playwright
 
+from entregas.models import Entrega, Entregador
+
 RESULTS = Path(__file__).resolve().parent.parent / "test-results"
 
 
 @override_settings(PASSWORD_HASHERS=["django.contrib.auth.hashers.MD5PasswordHasher"])
 class TestNavegador(StaticLiveServerTestCase):
+    def test_cadastro_entregador_e_selecao_na_entrega(self):
+        get_user_model().objects.create_user("cadastro", password="Senha-teste-482!")
+        RESULTS.mkdir(exist_ok=True)
+        with sync_playwright() as playwright:
+            browser = playwright.chromium.launch()
+            page = browser.new_page(viewport={"width": 1280, "height": 800})
+            page.goto(self.live_server_url)
+            page.get_by_label("Usuário", exact=True).fill("cadastro")
+            page.get_by_label("Senha", exact=True).fill("Senha-teste-482!")
+            page.get_by_role("button", name="Entrar no painel").click()
+            page.get_by_role("link", name="Entregadores", exact=True).click()
+            page.get_by_role("button", name="Novo entregador").click()
+            page.get_by_label("Nome completo *", exact=True).fill("João Lima")
+            page.get_by_label("Telefone", exact=True).fill("11999991234")
+            expect(page.get_by_label("Telefone", exact=True)).to_have_value(
+                "(11) 99999-1234"
+            )
+            page.get_by_role("button", name="Salvar entregador").click()
+            expect(page.locator("#courier-list tr")).to_have_count(1)
+            page.get_by_role("button", name="Editar", exact=True).click()
+            page.get_by_label("Nome completo *", exact=True).fill("João da Silva")
+            page.get_by_role("button", name="Salvar entregador").click()
+            expect(page.locator("#courier-list")).to_contain_text("João da Silva")
+            page.get_by_role("button", name="Inativar", exact=True).click()
+            expect(page.locator("#courier-list .badge")).to_have_text("Inativo")
+            page.get_by_role("button", name="Reativar", exact=True).click()
+            expect(page.locator("#courier-list .badge")).to_have_text("Ativo")
+            page.screenshot(path=str(RESULTS / "entregadores.png"), full_page=True)
+            page.set_viewport_size({"width": 390, "height": 844})
+            assert page.evaluate("document.documentElement.scrollWidth <= innerWidth")
+            page.get_by_role("link", name="Controle de entregas").click()
+            expect(page.locator("#stat-total")).to_have_text("0")
+            page.get_by_role("button", name="Nova entrega", exact=True).click()
+            page.get_by_label("Entregador", exact=True).select_option(
+                label="João da Silva"
+            )
+            expect(
+                page.locator('select[name="entregador"] option:checked')
+            ).to_have_text("João da Silva")
+            browser.close()
+
+    @override_settings(TIME_ZONE="America/La_Paz")
+    def test_virada_do_dia_atualiza_painel_sem_apagar_historico(self):
+        usuario = get_user_model().objects.create_user(
+            "virada", password="Senha-teste-482!"
+        )
+        instante = datetime(2026, 9, 8, 3, 59, 50, tzinfo=UTC)
+        Entrega.objects.create(
+            nome="Entrega do dia anterior",
+            endereco="Rua Um, 1",
+            telefone="11999991234",
+            cupom="123",
+            volumes=1,
+            data="2026-09-07",
+            criado_por=usuario,
+        )
+        with (
+            patch("django.utils.timezone.now", return_value=instante) as relogio,
+            sync_playwright() as playwright,
+        ):
+            browser = playwright.chromium.launch()
+            page = browser.new_page()
+            page.clock.install(time=instante)
+            page.goto(self.live_server_url)
+            page.get_by_label("Usuário", exact=True).fill("virada")
+            page.get_by_label("Senha", exact=True).fill("Senha-teste-482!")
+            page.get_by_role("button", name="Entrar no painel").click()
+            expect(page.locator("#stat-total")).to_have_text("1")
+            expect(page.locator("#date")).to_have_value("2026-09-07")
+            page.locator("#select-page").check()
+            relogio.return_value = instante + timedelta(seconds=31)
+            page.clock.fast_forward(31000)
+            expect(page.locator("#date")).to_have_value("2026-09-08")
+            expect(page.locator("#stat-total")).to_have_text("0")
+            expect(page.locator("#emit-route")).to_be_disabled()
+            page.get_by_role("button", name="Todas as entregas", exact=True).click()
+            expect(page.locator("#stat-total")).to_have_text("1")
+            browser.close()
+
     def test_operacao_pwa_desktop_mobile_e_offline(self):
+        Entregador.objects.bulk_create(
+            [Entregador(nome="Carlos Oliveira"), Entregador(nome="Pedro Souza")]
+        )
         RESULTS.mkdir(exist_ok=True)
         get_user_model().objects.create_superuser(
             "operador", password="Senha-do-teste-482!", first_name="Operador"
@@ -53,8 +139,8 @@ class TestNavegador(StaticLiveServerTestCase):
             page.get_by_role("button", name="Iniciar rota").click()
             page.locator("#confirm-action").click()
             expect(page.locator("#confirm-error")).to_contain_text("entregador")
-            page.get_by_label("Entregador da rota *", exact=True).fill(
-                "Carlos Oliveira"
+            page.get_by_label("Entregador da rota *", exact=True).select_option(
+                label="Carlos Oliveira"
             )
             page.locator("#confirm-action").click()
             expect(page.locator("#stat-em_rota")).to_have_text("1")

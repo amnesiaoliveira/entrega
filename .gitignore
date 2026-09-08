@@ -9,4 +9,11 @@ __pycache__/
 .dev-secret
 staticfiles/
 test-results/
+backups/
 *.log
+production.json
+logs/
+dist/
+# Apenas NSSM x64 e sua documentacao fazem parte da distribuicao.
+nssm/src/
+nssm/win32/

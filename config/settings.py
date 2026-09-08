@@ -1,3 +1,4 @@
+import json
 import os
 import secrets
 from pathlib import Path
@@ -5,6 +6,12 @@ from pathlib import Path
 from django.core.exceptions import ImproperlyConfigured
 
 BASE_DIR = Path(__file__).resolve().parent.parent
+if config_file := os.getenv("DJANGO_CONFIG_FILE"):
+    # Arquivo privado gerado pelo instalador; nunca incluído no repositório.
+    PRODUCTION_CONFIG = json.loads(Path(config_file).read_text(encoding="utf-8-sig"))
+    for key, value in PRODUCTION_CONFIG.items():
+        if key.startswith("DJANGO_"):
+            os.environ[key] = str(value)
 DEBUG = os.getenv("DJANGO_DEBUG", "1") == "1"
 SECRET_KEY = os.getenv("DJANGO_SECRET_KEY")
 if not SECRET_KEY:
@@ -59,7 +66,7 @@ WSGI_APPLICATION = "config.wsgi.application"
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / "db.sqlite3",
+        "NAME": Path(os.getenv("DJANGO_DATABASE_PATH", BASE_DIR / "db.sqlite3")),
         "OPTIONS": {"timeout": 20, "transaction_mode": "IMMEDIATE"},
     }
 }
@@ -88,9 +95,10 @@ LOGIN_REDIRECT_URL = "/"
 LOGOUT_REDIRECT_URL = "/entrar/"
 SESSION_COOKIE_HTTPONLY = True
 SESSION_COOKIE_AGE = 43200
-SESSION_COOKIE_SECURE = not DEBUG
-CSRF_COOKIE_SECURE = not DEBUG
-SECURE_SSL_REDIRECT = not DEBUG
-SECURE_HSTS_SECONDS = 31536000 if not DEBUG else 0
-SECURE_HSTS_INCLUDE_SUBDOMAINS = not DEBUG
-SECURE_HSTS_PRELOAD = not DEBUG
+HTTPS_ENABLED = os.getenv("DJANGO_HTTPS", "0" if DEBUG else "1") == "1"
+SESSION_COOKIE_SECURE = HTTPS_ENABLED
+CSRF_COOKIE_SECURE = HTTPS_ENABLED
+SECURE_SSL_REDIRECT = HTTPS_ENABLED
+SECURE_HSTS_SECONDS = 31536000 if HTTPS_ENABLED else 0
+SECURE_HSTS_INCLUDE_SUBDOMAINS = False
+SECURE_HSTS_PRELOAD = False

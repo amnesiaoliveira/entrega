@@ -1,6 +1,6 @@
 [project]
 name = "super-baranda-entregas"
-version = "0.1.0"
+version = "1.0.0"
 description = "PWA de controle de entregas do Super Baranda"
 requires-python = ">=3.14"
 dependencies = ["Django>=5.2.8,<5.3", "whitenoise>=6.9,<7", "waitress>=3,<4"]

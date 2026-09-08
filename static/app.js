@@ -21,10 +21,17 @@
   const escape = (value) => String(value ?? '').replace(/[&<>"']/g, (char) => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[char]));
   const labels = {pendente: 'Pendente', em_rota: 'Em rota', entregue: 'Entregue', cancelada: 'Cancelada'};
   const user = $('.app-layout').dataset.user;
-  const today = $('.app-layout').dataset.hoje;
+  let today = $('.app-layout').dataset.hoje;
+  const storeTimezone = $('.app-layout').dataset.fuso;
+  let followToday = true;
+  let serverOffset = 0;
   const draftKey = `baranda.draft.${user}`;
   const state = {items: [], status: '', page: 1, request: 0, online: navigator.onLine, editing: null, detail: null, saving: false};
   const selectedDeliveries = new Set();
+  let couriers = [];
+  function courierOptions(selected = null, allowInactive = false) {
+    return '<option value="">A definir</option>' + couriers.filter((item) => item.ativo || (allowInactive && item.id === Number(selected))).map((item) => `<option value="${item.id}">${escape(item.nome)}${item.ativo ? '' : ' (inativo)'}</option>`).join('');
+  }
   let timer;
   let confirmTask;
   const form = $('#delivery-form');
@@ -35,7 +42,26 @@
   };
   if (storage.get('baranda.user') !== user) storage.remove('baranda.offline');
   storage.set('baranda.user', user);
-  $('#today-label').textContent = new Date(`${today}T12:00:00`).toLocaleDateString('pt-BR', {weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'}).toUpperCase();
+  function showDay() {
+    $('#today-label').textContent = new Date(`${today}T12:00:00`).toLocaleDateString('pt-BR', {weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'}).toUpperCase();
+  }
+  function updateDay(day) {
+    if (!day || day === today) return false;
+    today = day;
+    showDay();
+    if (!followToday) return false;
+    $('#date').value = today;
+    selectedDeliveries.clear();
+    state.items = [];
+    state.page = 1;
+    render();
+    return true;
+  }
+  function checkDay() {
+    const parts = Object.fromEntries(new Intl.DateTimeFormat('en', {timeZone: storeTimezone, year: 'numeric', month: '2-digit', day: '2-digit'}).formatToParts(new Date(Date.now() + serverOffset)).map((part) => [part.type, part.value]));
+    if (updateDay(`${parts.year}-${parts.month}-${parts.day}`)) load();
+  }
+  showDay();
 
   function toast(message) {
     clearTimeout(timer);
@@ -90,7 +116,10 @@
     try {
       const result = await api(`/api/entregas/?${params()}`);
       if (request !== state.request) return;
+      serverOffset = new Date(result.consultado_em).getTime() - Date.now();
+      if (updateDay(result.hoje)) { await load(); return; }
       state.items = result.entregas;
+      couriers = result.entregadores || [];
       const saved = storage.set('baranda.offline', JSON.stringify({user, at: result.consultado_em, items: state.items, query: params().toString()}));
       $('#last-updated').textContent = `Atualizado às ${new Date(result.consultado_em).toLocaleTimeString('pt-BR', {hour: '2-digit', minute: '2-digit'})}${saved ? '' : ' · Cópia offline indisponível'}`;
     } catch (error) {
@@ -152,7 +181,6 @@
     $('#page-info').textContent = `${state.page} / ${pages}`;
     $('#previous').disabled = state.page === 1;
     $('#next').disabled = state.page === pages;
-    $('#couriers').innerHTML = [...new Set(state.items.map((item) => item.responsavel).filter(Boolean))].map((name) => `<option value="${escape(name)}"></option>`).join('');
   }
   function deliveryActions(item) {
     const button = (action, label) => `<button type="button" class="row-action" data-online-action data-action="${action}" data-id="${item.id}" ${state.online ? '' : 'disabled'}>${label}</button>`;
@@ -245,6 +273,8 @@
         }
       } catch { /* Ignore invalid local drafts. */ }
     }
+    if (!values.entregador && values.responsavel) values = {...values, entregador: couriers.find((entry) => entry.nome === values.responsavel)?.id || ''};
+    form.elements.namedItem('entregador').innerHTML = courierOptions(values.entregador, Boolean(item));
     for (const [key, value] of Object.entries(values)) {
       if (form.elements.namedItem(key)) form.elements.namedItem(key).value = value ?? '';
     }
@@ -276,6 +306,7 @@
       $('#delivery-dialog').close();
       $('#detail-dialog').close();
       $('#date').value = result.entrega.data;
+      followToday = $('#date').value === today && $('[data-view="operacao"]').classList.contains('active');
       $('#search').value = '';
       chooseStatus('');
       state.page = 1;
@@ -314,11 +345,12 @@
     $('#confirm-message').textContent = status === 'cancelada' ? `A entrega #${item.sequencia} será encerrada como cancelada. O registro será mantido no histórico.` : status === 'em_rota' ? `Confirme o endereço, os ${item.volumes} volume(s) e o entregador antes de iniciar a rota.` : `Confirme que ${item.nome} recebeu os ${item.volumes} volume(s). Esta ação finaliza a entrega.`;
     $('#confirm-error').hidden = true;
     $('#route-courier-field').hidden = status !== 'em_rota';
-    $('#route-courier').value = item.responsavel || '';
+    $('#route-courier').innerHTML = courierOptions();
+    $('#route-courier').value = item.entregador || '';
     $('#confirm-action').classList.toggle('danger', status === 'cancelada');
     confirmTask = async () => {
       const payload = {status, versao: item.versao};
-      if (status === 'em_rota') payload.responsavel = $('#route-courier').value.trim();
+      if (status === 'em_rota') payload.entregador = $('#route-courier').value;
       await api(`/api/entregas/${item.id}/`, {method: 'PATCH', body: JSON.stringify(payload)});
       $('#confirm-dialog').close();
       $('#detail-dialog').close();
@@ -369,7 +401,7 @@
   $('#previous').addEventListener('click', () => { state.page--; render(); });
   $('#next').addEventListener('click', () => { state.page++; render(); });
   $('#refresh').addEventListener('click', load);
-  $('#date').addEventListener('change', () => { state.page = 1; load(); });
+  $('#date').addEventListener('change', () => { followToday = $('#date').value === today && $('[data-view="operacao"]').classList.contains('active'); state.page = 1; load(); });
   let searchTimer;
   $('#search').addEventListener('input', () => { clearTimeout(searchTimer); searchTimer = setTimeout(() => { state.page = 1; load(); }, 300); });
   $('#export').addEventListener('click', async () => {
@@ -392,6 +424,7 @@
   });
   document.querySelectorAll('[data-view]').forEach((button) => button.addEventListener('click', () => {
     const history = button.dataset.view === 'historico';
+    followToday = !history;
     document.querySelectorAll('[data-view]').forEach((node) => node.classList.toggle('active', node === button));
     $('#breadcrumb-title').textContent = history ? 'Todas as entregas' : 'Visão geral';
     $('#page-title').innerHTML = history ? 'O histórico da sua operação<span>.</span>' : 'Entregas sob controle<span>.</span>';
@@ -403,6 +436,9 @@
   }));
   window.addEventListener('offline', () => connection(false));
   window.addEventListener('online', load);
+  window.addEventListener('focus', checkDay);
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) checkDay(); });
+  setInterval(() => { if (!document.hidden) checkDay(); }, 30000);
   connection(navigator.onLine);
   load();
 })();

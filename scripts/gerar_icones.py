@@ -19,7 +19,7 @@ with sync_playwright() as playwright:
         )
         scale = "70%" if maskable else "100%"
         page.set_content(
-            f"<style>body{{margin:0;background:#174c3c;height:100vh;display:grid;place-items:center}}svg{{width:{scale};height:{scale}}}</style>{svg}"
+            f"<style>body{{margin:0;background:#0f52ba;height:100vh;display:grid;place-items:center}}svg{{width:{scale};height:{scale}}}</style>{svg}"
         )
         page.screenshot(path=str(ICONS / name))
         page.close()

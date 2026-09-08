@@ -2,7 +2,7 @@
 
 Aplicação PWA em português para organizar as entregas da loja, com Django, SQLite e uma interface responsiva sem dependências externas de JavaScript, fontes ou CSS.
 
-## Executar no Windows
+## Executar no Windows (desenvolvimento)
 
 Pré-requisitos: [uv](https://docs.astral.sh/uv/getting-started/installation/) e Python 3.14. O uv pode instalar o Python necessário automaticamente.
 
@@ -27,21 +27,32 @@ O banco é `db.sqlite3`, criado na raiz e excluído do Git. Para encerrar o serv
 
 ## Operação
 
-- **Nova entrega:** nome, endereço, telefone, cupom, volumes e data são obrigatórios. Horário, entregador e observações são opcionais no cadastro. A sequência é gerada pelo banco e não se repete entre operadores.
+- **Nova entrega:** nome, endereço, telefone, cupom, volumes e data são obrigatórios. Horário, entregador e observações são opcionais no cadastro. A sequência é gerada pelo banco e não se repete entre operadores na mesma data.
 - **Rascunho:** o formulário de uma nova entrega é salvo neste navegador enquanto você digita e recuperado ao reabrir. O rascunho ainda não é uma entrega cadastrada.
 - **Visão geral:** começa na data de hoje. Os indicadores refletem a data e a busca selecionadas. Os cartões e abas filtram a lista por status; canceladas entram no total.
 - **Todas as entregas:** consulta o histórico de qualquer data. A busca aceita cliente, endereço, cupom, entregador ou sequência.
 - **Fluxo:** pendente → em rota → entregue. É obrigatório atribuir um entregador para iniciar a rota. Os botões de edição e cancelamento ficam disponíveis na lista durante a rota. Entregues e canceladas permanecem no histórico, sem edição.
 - **Ações:** a coluna da lista oferece “Iniciar rota” para pendentes, com atribuição do entregador na confirmação. Em rota, exibe “Imprimir ficha”, “Editar”, “Cancelar” e “Confirmar entrega”. Entregues e canceladas oferecem apenas “Detalhes”. As ações de alteração e impressão ficam desabilitadas sem conexão.
 - **Detalhes:** histórico com autor e horário, ligação para o cliente e link do endereço no Google Maps. O mapa abre uma busca pelo endereço; não há rastreamento GPS.
-- **Impressão:** a ficha individual foi compactada em A6 paisagem (148 × 105 mm, um quarto de A4), preservando os campos do modelo fornecido. O roteiro usa duas colunas em A4, margens de 8 mm e espaçamento reduzido, com os dados completos e espaço para recebimento. Desative cabeçalhos e rodapés do navegador e use escala de 100%. Para imprimir várias páginas A6 em papel A4, selecione quatro páginas por folha no visualizador de PDF ou na impressora. Endereços e observações longos podem aumentar a quantidade de páginas; o conteúdo não é truncado para forçar o encaixe.
+- **Impressão:** a ficha individual usa A6 retrato (105 × 148 mm, um quarto de A4), preservando os campos do modelo fornecido. O roteiro usa duas colunas em A4 retrato, margens de 8 mm e espaçamento reduzido, com os dados completos e espaço para recebimento. Desative cabeçalhos e rodapés do navegador e use escala de 100%. Para imprimir várias páginas A6 em papel A4, selecione quatro páginas por folha no visualizador de PDF ou na impressora. Endereços e observações longos podem aumentar a quantidade de páginas; o conteúdo não é truncado para forçar o encaixe.
 - **Exportação:** CSV compatível com Excel, com separador `;`, respeitando data, busca e status. Os valores que poderiam ser interpretados como fórmulas são neutralizados.
 - **Guia de roteiro:** marque as caixas ao lado dos clientes ou use “Selecionar página”. A seleção permanece ao mudar de página ou filtro, até “Limpar seleção” ou recarregar a tela. Selecione até 100 entregas e clique em “Emitir guia de roteiro”. A guia abre em outra aba com os dados atuais das entregas, totais de volumes, contatos, observações e espaços para motorista, veículo e recebimento. Use as setas para ajustar a ordem das paradas e “Imprimir / salvar PDF” para emitir em A4. A ordem inicial segue a seleção; não há otimização automática por distância. A guia requer conexão e é gerada para impressão, sem cadastrar uma rota no banco nem mudar o status das entregas.
 - **Equipe:** o responsável pode criar contas em `/admin/`. Todos os usuários ativos com login operam as entregas da loja. Somente contas com acesso administrativo autorizado gerenciam usuários.
+- **Entregadores:** o menu “Entregadores” abre `/entregadores/`, com tabela, busca e filtro de ativos/inativos. Cadastre nome e telefone, edite os dados ou inative/reative o cadastro. O telefone é opcional e tem máscara. Os seletores das entregas e da confirmação de início de rota usam o cadastro; novos vínculos e saídas exigem entregadores ativos. Cadastros vinculados não são excluídos. Uma entrega já em rota pode manter seu entregador inativado, mas não receber uma nova atribuição inativa.
+
+Os nomes de entregadores que já constavam nas entregas foram importados e vinculados pela migração. Complete seus telefones na tabela. O nome registrado na entrega é preservado como histórico ao renomear o cadastro; uma nova atribuição ou início de rota usa o nome atual. Cadastro de entregador não cria uma conta de acesso ao sistema.
 
 Pedidos de cadastro repetidos com a mesma identificação retornam a entrega já criada, evitando duplicação após uma resposta de rede perdida. Alterações simultâneas são detectadas pela versão do registro: recarregue os detalhes quando outra pessoa tiver alterado a entrega.
 
 O roteiro inclui **somente entregas com status pendente no momento da emissão**. Entregas em rota, entregues e canceladas são ignoradas, inclusive em uma seleção mista. Os totais e a numeração consideram apenas as pendentes. Se não houver nenhuma pendente, a página informa o motivo e não apresenta a guia nem o botão de impressão. A regra é validada no servidor, também ao acessar o endereço da guia diretamente.
+
+### Numeração diária
+
+Cada **data de entrega** possui seu próprio contador: `000001`, `000002` etc. A primeira entrega de uma nova data começa em `000001`, mesmo se for cadastrada antecipadamente. Não há tarefa agendada para zerar o banco: a reserva do número acontece na mesma transação do cadastro, com uma restrição de unicidade por data. O ID interno continua global, preservando vínculos, links e histórico.
+
+Cancelamentos não devolvem números ao contador. Alterar a data reserva o próximo número do dia de destino e não reutiliza o número anterior. Consulte uma entrega pelo conjunto **data + sequência**; no histórico sem filtro podem existir sequências iguais em datas diferentes. Os números anteriores à implantação da regra foram preservados pela migração, e cada data já existente continua a partir do maior número reservado.
+
+A visão geral acompanha a virada do dia no fuso `DJANGO_TIME_ZONE`: verifica a data a cada 30 segundos enquanto visível e ao retornar à janela. Ao mudar de dia, consulta as entregas da nova data e limpa a seleção de roteiro. Os registros antigos e seus status são preservados. Uma data escolhida manualmente ou o histórico não são trocados automaticamente. Sem conexão, a lista diária segue as limitações da cópia offline.
 
 ## Instalar e usar offline
 
@@ -51,33 +62,9 @@ Após uma consulta com conexão, a última lista carregada fica disponível offl
 
 Somente os registros da última consulta estão disponíveis offline, inclusive quando a consulta foi filtrada. Os dados offline ficam no armazenamento do navegador e não substituem o banco. Sair da conta apaga a cópia e os rascunhos. A tela offline também oferece **Apagar cópia deste dispositivo**. Não há cache de respostas da API nem de páginas autenticadas no service worker.
 
-## Configuração e publicação
+## Producao local no Windows
 
-O projeto usa Python 3.14, disponível neste ambiente, com Django 5.2 LTS. A série 5.2 suporta Python 3.14 a partir de 5.2.8, conforme as [notas oficiais do Django](https://docs.djangoproject.com/en/5.2/releases/5.2/). As versões resolvidas estão em `uv.lock`.
-
-O fuso padrão é `America/La_Paz`, acompanhando o ambiente fornecido. Ajuste `DJANGO_TIME_ZONE` para o fuso da loja, por exemplo `America/Sao_Paulo`. A interface usa português brasileiro, sem pressupor moeda ou valores financeiros.
-
-As variáveis de `.env.example` precisam ser definidas no ambiente do processo: o projeto não lê `.env` automaticamente. Para desenvolvimento, a chave local é gerada em `.dev-secret`, excluída do Git. Em produção, configure:
-
-- `DJANGO_DEBUG=0`.
-- `DJANGO_SECRET_KEY` com uma chave aleatória privada.
-- `DJANGO_ALLOWED_HOSTS` com os domínios permitidos, separados por vírgula.
-- `DJANGO_CSRF_TRUSTED_ORIGINS` com as origens HTTPS, separadas por vírgula.
-- `DJANGO_TIME_ZONE` conforme a localização da loja.
-
-Execute no servidor:
-
-```powershell
-uv sync --locked --no-dev
-uv run --no-dev python manage.py migrate
-uv run --no-dev python manage.py collectstatic --noinput
-uv run --no-dev python manage.py check --deploy
-uv run --no-dev waitress-serve --listen=127.0.0.1:8000 --url-scheme=https config.wsgi:application
-```
-
-O último comando pressupõe um proxy HTTPS local encaminhando para `127.0.0.1:8000`; a opção `--url-scheme=https` deve ser usada apenas nesse cenário. O servidor de desenvolvimento não deve atender a publicação. WhiteNoise serve os arquivos estáticos coletados. Publique na raiz do domínio, pois as URLs do PWA usam `/`.
-
-Esta entrega inclui o projeto local, sem implantação em domínio público. O banco SQLite atende uma operação pequena; mantenha backups consistentes usando a API de backup do SQLite ou com o servidor parado. O CSV é um relatório e não restaura usuários nem histórico. Para grande volume, planeje migrar o banco e paginar as consultas no servidor; atualmente o histórico é carregado integralmente, com paginação visual de oito registros.
+Consulte [PRODUCAO.md](PRODUCAO.md) para usar instalador.ps1, importar o banco existente, configurar servico, backup diario, restauracao e HTTPS. Versao: **1.0.0**; veja [CHANGELOG.md](CHANGELOG.md).
 
 ## Validação
 
@@ -102,4 +89,8 @@ Os ícones PNG já estão incluídos. Para regenerá-los após editar o SVG: `uv
 
 Consulte o [padrão de desenvolvimento Django + VS Code](PADRAO_PROJETOS_DJANGO.md).
 
-O domínio usa nomes em português, organizado no app `entregas`. As adaptações são Python 3.14, interface em JavaScript/CSS nativos, Playwright para testes de navegador, WhiteNoise para estáticos e Waitress para execução compatível com Windows. Ruff formata e verifica Python; os templates e os fluxos JavaScript são verificados pelo teste de navegador. Não foi criado repositório remoto nem feita publicação.
+O domínio usa nomes em português, organizado no app `entregas`. As adaptações são Python 3.14, interface em JavaScript/CSS nativos, Playwright para testes de navegador, WhiteNoise para estáticos e Waitress para execução compatível com Windows. Ruff formata e verifica Python; os templates e os fluxos JavaScript são verificados pelo teste de navegador. O instalador e o procedimento de operacao estao em PRODUCAO.md.
+
+## Tema visual
+
+O tema compartilhado em static/theme.css aplica a referencia clinical-tech-styleguide.html: azul #0F52BA, fundo #F8FAFC, bordas suaves e fonte Inter local em static/fonts/, com licenca SIL OFL. As regras de tela preservam a impressao compacta em retrato.

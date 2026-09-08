@@ -1,5 +1,6 @@
 import json
 import uuid
+from datetime import timedelta
 
 import pytest
 from django.contrib.auth import get_user_model
@@ -7,11 +8,17 @@ from django.test import Client
 from django.urls import reverse
 from django.utils import timezone
 
-from .models import Entrega, EventoEntrega
+from .models import Entrega, Entregador, EventoEntrega
 
 
 @pytest.fixture
 def operador(db):
+    Entregador.objects.bulk_create(
+        [
+            Entregador(nome=nome)
+            for nome in ["Carlos", "Ana", "Carlos Oliveira", "Pedro Souza"]
+        ]
+    )
     return get_user_model().objects.create_user("operador", password="Senha-teste-482!")
 
 
@@ -71,6 +78,58 @@ def test_cadastro_sequencial_idempotente_e_auditado(cliente, dados):
     segundo = cadastrar(cliente, dados).json()["entrega"]
     assert segundo["id"] > primeiro["id"]
     assert EventoEntrega.objects.count() == 2
+
+
+def test_numero_reinicia_em_cada_data_e_busca_usa_numero_diario(cliente, dados):
+    primeiro = cadastrar(cliente, dados).json()["entrega"]
+    dados["requisicao"] = str(uuid.uuid4())
+    segundo = cadastrar(cliente, dados).json()["entrega"]
+    amanha = (timezone.localdate() + timedelta(days=1)).isoformat()
+    dados.update(data=amanha, requisicao=str(uuid.uuid4()))
+    terceiro = cadastrar(cliente, dados).json()["entrega"]
+    assert [primeiro["sequencia"], segundo["sequencia"], terceiro["sequencia"]] == [
+        "000001",
+        "000002",
+        "000001",
+    ]
+    assert len({primeiro["id"], segundo["id"], terceiro["id"]}) == 3
+    encontrados = cliente.get(
+        reverse("lista"), {"data": amanha, "busca": "#000001"}
+    ).json()["entregas"]
+    assert [item["id"] for item in encontrados] == [terceiro["id"]]
+    assert (
+        cliente.get(reverse("lista")).json()["hoje"] == timezone.localdate().isoformat()
+    )
+
+
+def test_mudanca_de_data_reserva_numero_sem_reutilizar_o_anterior(cliente, dados):
+    primeiro = cadastrar(cliente, dados).json()["entrega"]
+    dados["data"] = (timezone.localdate() + timedelta(days=1)).isoformat()
+    movida = alterar(cliente, primeiro, **dados).json()["entrega"]
+    assert movida["id"] == primeiro["id"]
+    assert movida["sequencia"] == "000001"
+    dados.update(data=timezone.localdate().isoformat(), requisicao=str(uuid.uuid4()))
+    nova = cadastrar(cliente, dados).json()["entrega"]
+    assert nova["sequencia"] == "000002"
+
+
+def test_cancelamento_e_reenvio_nao_reiniciam_contador(cliente, dados):
+    primeira = cadastrar(cliente, dados).json()["entrega"]
+    alterar(cliente, primeira, status="cancelada")
+    assert cadastrar(cliente, dados).json()["entrega"]["id"] == primeira["id"]
+    dados["requisicao"] = str(uuid.uuid4())
+    assert cadastrar(cliente, dados).json()["entrega"]["sequencia"] == "000002"
+
+
+def test_salvar_mesma_data_em_texto_preserva_numero(cliente, dados):
+    cadastrar(cliente, dados)
+    item = Entrega.objects.get()
+    item.data = item.data.isoformat()
+    item.nome = "Nome corrigido"
+    item.save()
+    assert item.sequencia == "000001"
+    dados["requisicao"] = str(uuid.uuid4())
+    assert cadastrar(cliente, dados).json()["entrega"]["sequencia"] == "000002"
 
 
 @pytest.mark.parametrize(
@@ -257,6 +316,77 @@ def test_roteiro_nao_omite_entrega_inexistente(cliente, dados):
 @pytest.mark.django_db
 def test_roteiro_exige_login():
     assert Client().get(reverse("roteiro"), {"ids": "1"}).status_code == 302
+
+
+def test_cadastro_entregadores_edicao_inativacao_e_concorrencia(cliente):
+    payload = {"nome": "João Lima", "telefone": "11999991234", "ativo": True}
+    response = cliente.post(
+        reverse("entregadores"), payload, content_type="application/json"
+    )
+    assert response.status_code == 201
+    item = response.json()["entregador"]
+    assert (
+        cliente.post(
+            reverse("entregadores"), payload, content_type="application/json"
+        ).status_code
+        == 400
+    )
+    payload.update(versao=item["versao"], ativo=False)
+    url = reverse("editar-entregador", args=[item["id"]])
+    assert (
+        cliente.patch(url, payload, content_type="application/json").status_code == 200
+    )
+    assert not Entregador.objects.get(pk=item["id"]).ativo
+    assert (
+        cliente.patch(url, payload, content_type="application/json").status_code == 409
+    )
+    assert cliente.delete(url).status_code == 405
+
+
+def test_entregador_inativo_nao_recebe_nova_entrega_nem_inicia_rota(cliente, dados):
+    item = cadastrar(cliente, dados).json()["entrega"]
+    cadastrado = Entregador.objects.get(nome="Carlos")
+    cadastrado.ativo = False
+    cadastrado.save()
+    dados["requisicao"] = str(uuid.uuid4())
+    assert cadastrar(cliente, dados).status_code == 400
+    assert (
+        alterar(cliente, item, status="em_rota", entregador=cadastrado.pk).status_code
+        == 400
+    )
+    assert Entrega.objects.get().entregador_id == cadastrado.pk
+
+
+def test_renomear_entregador_preserva_nome_da_entrega(cliente, dados):
+    item = cadastrar(cliente, dados).json()["entrega"]
+    Entregador.objects.filter(nome="Carlos").update(nome="Carlos Silva")
+    entrega = Entrega.objects.get(pk=item["id"])
+    assert entrega.responsavel == "Carlos"
+    assert entrega.entregador.nome == "Carlos Silva"
+
+
+@pytest.mark.django_db
+def test_entregadores_exigem_login():
+    client = Client()
+    assert client.get(reverse("cadastro-entregadores")).status_code == 302
+    assert client.get(reverse("entregadores")).status_code == 401
+
+
+@pytest.mark.parametrize(
+    "payload",
+    [
+        {"nome": "", "ativo": True},
+        {"nome": "Nome", "telefone": "123", "ativo": True},
+        {"nome": "Nome", "ativo": "sim"},
+    ],
+)
+def test_valida_dados_entregador(cliente, payload):
+    assert (
+        cliente.post(
+            reverse("entregadores"), payload, content_type="application/json"
+        ).status_code
+        == 400
+    )
 
 
 def test_roteiro_ignora_outros_status_e_recalcula_totais(cliente, dados):

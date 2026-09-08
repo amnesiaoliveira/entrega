@@ -18,7 +18,7 @@ source = source.replace(
 fields = {
     'name="nomeCompleto" type="text"': 'name="nomeCompleto" type="text" value="{{ entrega.nome }}" readonly',
     '<textarea id="endereco-completo" name="enderecoCompleto"></textarea>': '<div class="address-value">{{ entrega.endereco|linebreaksbr }}</div>',
-    'name="telefone" type="tel" inputmode="tel"': 'name="telefone" type="tel" inputmode="tel" value="{{ entrega.telefone }}" readonly',
+    'name="telefone" type="tel" inputmode="tel" maxlength="15"': 'name="telefone" type="tel" inputmode="tel" maxlength="15" value="{{ entrega.telefone }}" readonly',
     'name="numeroCupom" type="text"': 'name="numeroCupom" type="text" value="{{ entrega.cupom }}" readonly',
     'name="quantidadeVolumes" type="number" min="1"': 'name="quantidadeVolumes" type="number" min="1" value="{{ entrega.volumes }}" readonly',
     'name="numeroSequencia"': 'name="numeroSequencia" value="{{ entrega.sequencia }}"',
@@ -60,6 +60,6 @@ source = "{% load static %}\n" + source
 source = source.replace("Imprimir meia folha A4", "Imprimir ficha compacta (A6)")
 source = source.replace(
     "</head>",
-    '<link rel="stylesheet" href="{% static \'ficha-compacta.css\' %}">\n</head>',
+    '<link rel="stylesheet" href="{% static \'ficha-compacta.css\' %}">\n<link rel="stylesheet" href="{% static \'theme.css\' %}">\n</head>',
 )
 (ROOT / "templates/entregas/ficha.html").write_text(source, encoding="utf-8")

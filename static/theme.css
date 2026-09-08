@@ -1,0 +1,128 @@
+/* Tema padrão: clinical-tech-styleguide.html. Ativos locais, inclusive a fonte. */
+@font-face {
+  font-family: Inter;
+  src: url("fonts/InterVariable.woff2") format("woff2");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* A impressão mantém suas próprias medidas e tipografia compacta. */
+@media screen {
+  :root {
+    --brand-primary: #0f52ba;
+    --brand-hover: #0b4094;
+    --brand-soft: #eff6ff;
+    --bg-main: #f8fafc;
+    --bg-card: #ffffff;
+    --text-main: #0f172a;
+    --text-muted: #64748b;
+    --border-color: #e2e8f0;
+    --status-success: #10b981;
+    --status-warning: #f59e0b;
+    --status-danger: #ef4444;
+    --radius: 12px;
+    --green: var(--brand-primary);
+    --green-dark: var(--brand-hover);
+    --green-soft: var(--brand-soft);
+    --ink: var(--text-main);
+    --muted: var(--text-muted);
+    --line: var(--border-color);
+    --bg: var(--bg-main);
+    --blue: var(--brand-primary);
+    --amber: var(--status-warning);
+    --accent: var(--brand-primary);
+    --field: var(--border-color);
+    --screen-bg: var(--bg-main);
+  }
+
+  body { font-family: Inter, "Segoe UI", sans-serif; background: var(--bg-main); color: var(--text-main); line-height: 1.5; }
+  h1, .page-heading h1 { font-size: 28px; font-weight: 700; letter-spacing: -.6px; }
+  h2, .panel-heading h2, .dialog-heading h2 { font-size: 20px; font-weight: 600; letter-spacing: -.3px; }
+  h3 { font-size: 18px; font-weight: 600; }
+  h1 > span, .empty-icon, .form-section span { color: var(--brand-primary); }
+  svg[stroke] { stroke-width: 2; }
+  .eyebrow, .brand small, .nav-caption, .nav-item, .breadcrumb, .store-label,
+  .stat-card > div, .stat-card > small, .cell-sub, .address-text, .volumes,
+  .table-footer, .bottom-note, .login-help, .selection-bar > span,
+  .delivery-actions:before { color: var(--text-muted); }
+  .breadcrumb strong { color: var(--text-main); }
+  .brand-mark > span { color: #bfdbfe; }
+  .topbar, .secondary { background: var(--bg-card); }
+  .nav-item.active, .avatar, .client-avatar, .count, .status-tabs button.active span,
+  .stop-number { background: var(--brand-soft); color: var(--brand-primary); }
+  .nav-item.active { font-weight: 600; }
+  .sidebar-tip, .selection-bar, .dialog-footer, thead, .search-field { background: var(--bg-main); border-color: var(--border-color); }
+  .sidebar-tip > span { color: var(--brand-primary); }
+  .sidebar-tip p { color: var(--text-muted); }
+  .stat-card, .deliveries-panel, .offline-card { border-radius: var(--radius); box-shadow: 0 1px 3px rgb(0 0 0 / 5%); }
+  .stat-card:hover { border-color: #93b4e6; }
+  .stat-icon.green { background: #ecfdf5; color: var(--status-success); }
+  .stat-icon.amber { background: #fffbeb; color: var(--status-warning); }
+  .stat-icon.blue { background: var(--brand-soft); color: var(--brand-primary); }
+  .dot.green, .connection i { background: var(--status-success); }
+  .dot.amber, .connection.offline i { background: var(--status-warning); }
+  .dot.blue, .courier .dot { background: var(--brand-primary); }
+  .connection { color: #047857; }
+  .connection.offline { color: #92400e; }
+  .button, .icon-button, .search-field, .date-field { border-radius: 8px; }
+  .primary { box-shadow: 0 1px 3px rgb(15 82 186 / 12%); }
+  .danger { background: var(--status-danger); }
+  .danger:hover { background: #dc2626; }
+  .icon-button:hover, tbody tr:hover { background: var(--bg-main); }
+  tbody tr.selected-delivery { background: var(--brand-soft); }
+  .status-tabs { gap: 8px; }
+  .status-tabs button { color: var(--text-muted); padding: 10px 12px; font-size: 12px; }
+  .status-tabs button span { color: var(--text-muted); background: #f1f5f9; border-radius: 9999px; }
+  th { color: var(--text-muted); font-size: 10px; letter-spacing: .5px; }
+  td { border-color: var(--border-color); }
+  .badge { border: 1px solid transparent; border-radius: 9999px; padding: 4px 10px; font-size: 11px; font-weight: 500; gap: 6px; }
+  .badge.pendente { background: #fffbeb; color: #92400e; border-color: #fef3c7; }
+  .badge.em_rota { background: var(--brand-soft); color: var(--brand-primary); border-color: #dbeafe; }
+  .badge.entregue { background: #ecfdf5; color: #047857; border-color: #d1fae5; }
+  .badge.cancelada { background: #fef2f2; color: #b91c1c; border-color: #fee2e2; }
+  .badge.entregue:before { background: var(--status-success); }
+  .badge.pendente:before { background: var(--status-warning); }
+  .badge.cancelada:before { background: var(--status-danger); }
+  .row-actions .row-action { font-family: inherit; border-color: var(--border-color); color: var(--brand-primary); border-radius: 8px; }
+  .row-actions [data-action="start"], .row-actions [data-action="complete"] { background: var(--brand-primary); border-color: var(--brand-primary); color: white; }
+  .row-actions [data-action="cancel"] { color: #b91c1c; }
+  input, textarea, select, label select { border-color: var(--border-color); border-radius: 8px; }
+  input::placeholder, textarea::placeholder { color: var(--text-muted); }
+  input:focus, textarea:focus, select:focus { border-color: var(--brand-primary); box-shadow: 0 0 0 3px #dbeafe; outline: none; }
+  button:focus-visible, a:focus-visible, .delivery-select:focus-visible,
+  .selection-bar input:focus-visible, .search-field:focus-within { outline: 2px solid var(--brand-primary); outline-offset: 3px; }
+  .search-field svg, .date-field svg, .refresh svg { color: var(--text-muted); }
+  .detail-grid dt { font-size: 12px; font-weight: 500; text-transform: uppercase; letter-spacing: .5px; }
+  .detail-grid dd { font-size: 15px; }
+  .timeline li { border-color: var(--border-color); }
+  dialog { border-radius: var(--radius); box-shadow: 0 20px 80px rgb(15 23 42 / 20%); }
+  dialog::backdrop { background: rgb(15 23 42 / 45%); }
+  .form-error { background: #fef2f2; color: #b91c1c; }
+  .notice { background: #fffbeb; border-color: #fde68a; color: #92400e; }
+  .toast { box-shadow: 0 8px 30px rgb(15 23 42 / 20%); }
+  .login-story .brand small, .login-story p, .login-story > small,
+  .login-story .eyebrow.light { color: #dbeafe; }
+  .login-story h1 > span { color: #bfdbfe; }
+  .route-art > span { color: #dbeafe; border-color: #6090d8; }
+  .route-art i { border-color: #6090d8; }
+  .login-form h2 { font-size: 28px; letter-spacing: -.6px; }
+
+  /* Pré-visualizações das guias, sem alterar as regras de papel. */
+  .toolbar a, .toolbar button, .reorder button { color: var(--brand-primary); border-color: var(--border-color); font-family: inherit; }
+  #print-route, .toolbar .btn-print { background: var(--brand-primary); color: white; }
+  .route-sheet .brand { color: var(--brand-primary); }
+  .route-sheet header > p, .route-sheet dt, .route-sheet footer { color: var(--text-muted); }
+  .route-sheet .totals, .route-sheet .receipt { border-color: var(--border-color); }
+  .route-sheet, .delivery-form { border-color: var(--border-color); border-radius: var(--radius); box-shadow: 0 1px 3px rgb(0 0 0 / 5%); }
+  .stop { border-color: var(--border-color); }
+  .instructions { background: var(--brand-soft); color: var(--brand-primary); }
+}
+
+@media screen and (min-width: 901px) {
+  .nav-item { font-size: 14px; font-weight: 500; }
+}
+@media screen and (max-width: 600px) {
+  .panel-heading h2 { font-size: 16px; }
+  .status-tabs button { padding-inline: 8px; font-size: 11px; }
+}
