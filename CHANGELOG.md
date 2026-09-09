@@ -1,5 +1,17 @@
 # Histórico de versões
 
+## 1.1.0 — 2026-09-09
+
+- Navegação principal unificada entre entregas e entregadores, com links reais, indicação da tela atual, histórico do navegador e menu lateral recolhível preservado.
+- Melhorias de usabilidade e acessibilidade: breadcrumbs, retorno entre telas, limpeza de filtros, atalho `/` para busca, estados de carregamento e navegação por teclado.
+- Confirmação antes de inativar ou reativar entregadores, com explicação do efeito da ação.
+- Tela de login reduzida aos dados essenciais, com formulário organizado em uma caixa centralizada e responsiva.
+- Guia de roteiro padronizada como manifesto de transporte, usando os dados reais da entrega e comprovante por parada.
+- Impressão compacta em A4 retrato validada com oito pedidos em uma única página, distribuídos em grade 2 × 4.
+- Cache da PWA renovado para distribuir os novos estilos aos dispositivos instalados.
+
+Atualize pelo instalador com os mesmos parâmetros da instalação anterior, **sem `-ImportarBanco`**. O instalador cria um backup antes da atualização. Não há novas migrações nesta versão. Após atualizar, recarregue o navegador com Ctrl + F5.
+
 ## 1.0.4 — 2026-09-08
 
 - Corrige a abertura de Nova entrega em HTTP pelo nome/IP do servidor, onde `crypto.randomUUID()` não está disponível.

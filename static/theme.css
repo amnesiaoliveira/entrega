@@ -44,7 +44,7 @@
   svg[stroke] { stroke-width: 2; }
   .eyebrow, .brand small, .nav-caption, .nav-item, .breadcrumb, .store-label,
   .stat-card > div, .stat-card > small, .cell-sub, .address-text, .volumes,
-  .table-footer, .bottom-note, .login-help, .selection-bar > span,
+  .table-footer, .bottom-note, .selection-bar > span,
   .delivery-actions:before { color: var(--text-muted); }
   .breadcrumb strong { color: var(--text-main); }
   .brand-mark > span { color: #bfdbfe; }
@@ -93,6 +93,13 @@
   button:focus-visible, a:focus-visible, .delivery-select:focus-visible,
   .selection-bar input:focus-visible, .search-field:focus-within { outline: 2px solid var(--brand-primary); outline-offset: 3px; }
   .search-field svg, .date-field svg, .refresh svg { color: var(--text-muted); }
+  .search-field kbd { margin-left: auto; padding: 2px 7px; border: 1px solid var(--border-color); border-radius: 5px; background: white; color: var(--text-muted); font: 600 11px Inter, sans-serif; box-shadow: 0 1px 1px rgb(15 23 42 / 6%); }
+  .clear-filters { white-space: nowrap; }
+  .breadcrumb a:hover { color: var(--brand-primary); text-decoration: underline; text-underline-offset: 3px; }
+  .nav-item[aria-current="page"] { color: var(--brand-primary); }
+  [aria-busy="true"] { cursor: progress; }
+  .skip-link { position: fixed; top: 10px; left: 10px; z-index: 1000; padding: 10px 14px; border-radius: 8px; background: var(--brand-primary); color: white; transform: translateY(-150%); }
+  .skip-link:focus { transform: translateY(0); }
   .detail-grid dt { font-size: 12px; font-weight: 500; text-transform: uppercase; letter-spacing: .5px; }
   .detail-grid dd { font-size: 15px; }
   .timeline li { border-color: var(--border-color); }
@@ -101,12 +108,7 @@
   .form-error { background: #fef2f2; color: #b91c1c; }
   .notice { background: #fffbeb; border-color: #fde68a; color: #92400e; }
   .toast { box-shadow: 0 8px 30px rgb(15 23 42 / 20%); }
-  .login-story .brand small, .login-story p, .login-story > small,
-  .login-story .eyebrow.light { color: #dbeafe; }
-  .login-story h1 > span { color: #bfdbfe; }
-  .route-art > span { color: #dbeafe; border-color: #6090d8; }
-  .route-art i { border-color: #6090d8; }
-  .login-form h2 { font-size: 28px; letter-spacing: -.6px; }
+  .login-form h1 { font-size: 28px; letter-spacing: -.6px; }
 
   /* Pré-visualizações das guias, sem alterar as regras de papel. */
   .toolbar a, .toolbar button, .reorder button { color: var(--brand-primary); border-color: var(--border-color); font-family: inherit; }
@@ -162,4 +164,5 @@
 }
 @media screen and (max-width: 600px) {
   .sidebar-toggle { display: none; }
+  .search-field kbd { display: none; }
 }

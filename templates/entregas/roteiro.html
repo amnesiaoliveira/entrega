@@ -4,24 +4,25 @@
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Guia de roteiro de entrega · Super Baranda</title><link rel="stylesheet" href="{% static 'roteiro.css' %}"><link rel="stylesheet" href="{% static 'roteiro-compacto.css' %}"><link rel="stylesheet" href="{% static 'theme.css' %}">
 </head>
 <body>
-  <div class="toolbar"><a href="/">← Controle de entregas</a>{% if not erro %}<button type="button" id="print-route">Imprimir / salvar PDF</button>{% endif %}</div>
+  <div class="toolbar"><a href="/?view=operacao">← Voltar às entregas</a>{% if not erro %}<button type="button" id="print-route">Imprimir / salvar PDF</button>{% endif %}</div>
   <main class="route-sheet">
-    <header><p class="brand">SUPER BARANDA</p><h1>Guia de roteiro de entrega</h1>
-    {% if erro %}<p role="alert">{{ erro }}</p>{% else %}
-    <p>Emitida em {{ emitido_em|date:'d/m/Y H:i' }} · Por {{ request.user.get_full_name|default:request.user.username }}</p>
-    <div class="totals"><strong>{{ entregas|length }} entrega{{ entregas|length|pluralize:"s" }}</strong><strong>{{ total_volumes }} volume{{ total_volumes|pluralize:"s" }}</strong></div>
+    <header class="manifest-header"><div class="manifest-title"><p class="brand">SUPER BARANDA</p><h1>Guia de roteiro de entrega</h1>
+    {% if erro %}<p role="alert">{{ erro }}</p>{% else %}<p><strong>Responsável:</strong> {{ request.user.get_full_name|default:request.user.username }}</p>{% endif %}</div>
+    {% if not erro %}
+    <div class="manifest-meta"><p><strong>Emissão:</strong> {{ emitido_em|date:'d/m/Y H:i' }}</p><div class="totals"><strong>{{ entregas|length }} entrega{{ entregas|length|pluralize:"s" }}</strong><strong>{{ total_volumes }} volume{{ total_volumes|pluralize:"s" }}</strong></div></div>
+    <div class="departure"><strong>Motorista:</strong> ____________________ <strong>Veículo:</strong> ________________ <strong>Saída:</strong> ____/____/______ às ____:____</div>
+    {% endif %}
+    </header>
+    {% if not erro %}
     <p class="instructions">Confira as paradas e use as setas para ajustar a ordem antes de imprimir. A ordem inicial segue a seleção das entregas.</p>
     {% if ignoradas %}<p class="instructions" id="route-exclusions">{{ ignoradas }} entrega{{ ignoradas|pluralize:"s" }} ignorada{{ ignoradas|pluralize:"s" }} por não estar{{ ignoradas|pluralize:"em" }} com status pendente. A guia inclui apenas as entregas pendentes na emissão.</p>{% endif %}
-    <div class="departure">Motorista: __________________________ &nbsp; Veículo: __________________<br>Data da saída: ____/____/________ &nbsp; Horário da saída: ____:____</div>
-    {% endif %}</header>
+    {% endif %}
     {% if not erro %}<div id="route-stops">
     {% for entrega in entregas %}
       <article class="stop" data-id="{{ entrega.pk }}">
-        <div class="stop-heading"><h2><span class="stop-number">{{ forloop.counter }}</span> {{ entrega.nome }}</h2><strong>#{{ entrega.sequencia }}</strong><div class="reorder"><button type="button" data-move="-1" aria-label="Mover entrega {{ entrega.sequencia }} para cima">↑</button><button type="button" data-move="1" aria-label="Mover entrega {{ entrega.sequencia }} para baixo">↓</button></div></div>
-        <p class="address"><strong>Endereço:</strong> {{ entrega.endereco }}</p>
-        <dl><div><dt>Telefone</dt><dd>{{ entrega.telefone }}</dd></div><div><dt>Cupom</dt><dd>{{ entrega.cupom }}</dd></div><div><dt>Volumes</dt><dd>{{ entrega.volumes }}</dd></div><div><dt>Previsão</dt><dd>{{ entrega.data|date:'d/m/Y' }}{% if entrega.horario %} · {{ entrega.horario|time:'H:i' }}{% endif %}</dd></div><div><dt>Entregador</dt><dd>{{ entrega.responsavel|default:'A definir' }}</dd></div><div><dt>Status na emissão</dt><dd>{{ entrega.get_status_display }}</dd></div></dl>
-        {% if entrega.observacoes %}<p class="notes"><strong>Observações:</strong> {{ entrega.observacoes|linebreaksbr }}</p>{% endif %}
-        <div class="receipt"><div>Recebido por: ______________ &nbsp; Hora: ___:___</div><div>Ass.: ______________ &nbsp; ☐ Entregue &nbsp; ☐ Não entregue</div></div>
+        <div class="stop-heading"><div><span class="stop-number">{{ forloop.counter }}</span><strong class="delivery-id">Entrega #{{ entrega.sequencia }}</strong></div><div class="reorder"><button type="button" data-move="-1" aria-label="Mover entrega {{ entrega.sequencia }} para cima">↑</button><button type="button" data-move="1" aria-label="Mover entrega {{ entrega.sequencia }} para baixo">↓</button></div></div>
+        <div class="details-grid"><div class="customer-details"><p><strong>Cliente:</strong> {{ entrega.nome }}</p>{% if entrega.cpf %}<p><strong>CPF:</strong> {{ entrega.cpf_formatado }}</p>{% endif %}<p class="address"><strong>Endereço:</strong> {{ entrega.endereco }}</p><p><strong>Telefone:</strong> {{ entrega.telefone }}</p>{% if entrega.observacoes %}<p class="notes"><strong>Obs./Referência:</strong> {{ entrega.observacoes|linebreaksbr }}</p>{% endif %}</div><dl><div><dt>Cupom</dt><dd>{{ entrega.cupom }}</dd></div><div><dt>Volumes</dt><dd>{{ entrega.volumes }}</dd></div><div><dt>Previsão</dt><dd>{{ entrega.data|date:'d/m/Y' }}{% if entrega.horario %} · {{ entrega.horario|time:'H:i' }}{% endif %}</dd></div><div><dt>Entregador</dt><dd>{{ entrega.responsavel|default:'A definir' }}</dd></div><div></div></dl></div>
+        <div class="receipt"><strong>Comprovante:</strong> Recebido por ____________________ <span>Hora ____:____</span><span>Ass. ____________________</span><span>☐ Entregue&nbsp;&nbsp; ☐ Não entregue</span></div>
       </article>
     {% endfor %}
     </div><footer>Confira os endereços e os volumes antes da saída. Boa Entrega!</footer>{% endif %}

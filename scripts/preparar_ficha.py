@@ -62,4 +62,8 @@ source = source.replace(
     "</head>",
     '<link rel="stylesheet" href="{% static \'ficha-compacta.css\' %}">\n<link rel="stylesheet" href="{% static \'theme.css\' %}">\n</head>',
 )
+source = source.replace(
+    '<div class="toolbar">',
+    '<div class="toolbar">\n    <a class="button secondary" href="/?view=operacao">← Voltar às entregas</a>',
+)
 (ROOT / "templates/entregas/ficha.html").write_text(source, encoding="utf-8")

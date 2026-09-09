@@ -1,5 +1,6 @@
 """Teste real em Chromium; usa banco isolado do Django, nunca o banco da loja."""
 
+import re
 import uuid
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
@@ -152,6 +153,15 @@ class TestNavegador(StaticLiveServerTestCase):
             page.get_by_label("Usuário", exact=True).fill("menu")
             page.get_by_label("Senha", exact=True).fill("Senha-teste-482!")
             page.get_by_role("button", name="Entrar no painel").click()
+            expect(
+                page.get_by_role("button", name="Nova entrega", exact=True)
+            ).to_be_visible()
+            page.keyboard.press("/")
+            expect(page.get_by_label("Buscar entregas")).to_be_focused()
+            page.get_by_label("Buscar entregas").fill("sem resultado")
+            expect(page.get_by_role("button", name="Limpar filtros")).to_be_visible()
+            page.get_by_role("button", name="Limpar filtros").click()
+            expect(page.get_by_label("Buscar entregas")).to_be_empty()
             sidebar = page.locator(".sidebar")
             expect(sidebar).to_have_css("width", "242px")
             page.get_by_role("button", name="Recolher menu lateral").click()
@@ -159,11 +169,25 @@ class TestNavegador(StaticLiveServerTestCase):
             expect(page.locator("#sidebar-toggle")).to_have_attribute(
                 "aria-expanded", "false"
             )
-            page.get_by_role("button", name="Todas as entregas", exact=True).click()
+            page.get_by_role("link", name="Todas as entregas", exact=True).click()
+            expect(page).to_have_url(re.compile(r"\?view=historico$"))
+            expect(
+                page.get_by_role("link", name="Todas as entregas", exact=True)
+            ).to_have_attribute("aria-current", "page")
+            expect(page.get_by_label("Data das entregas")).to_have_value("")
             page.reload()
+            expect(
+                page.get_by_text("O histórico da sua operação", exact=False)
+            ).to_be_visible()
             expect(sidebar).to_have_css("width", "76px")
             page.get_by_role("link", name="Entregadores", exact=True).click()
-            page.get_by_role("link", name="Controle de entregas").click()
+            expect(
+                page.get_by_role("link", name="Entregadores", exact=True)
+            ).to_have_attribute("aria-current", "page")
+            expect(page.get_by_role("navigation", name="Localização")).to_contain_text(
+                "Operação/Entregadores"
+            )
+            page.get_by_role("link", name="Visão geral", exact=True).click()
             expect(sidebar).to_have_css("width", "76px")
             RESULTS.mkdir(exist_ok=True)
             page.screenshot(path=str(RESULTS / "sidebar-recolhido.png"))
@@ -175,6 +199,50 @@ class TestNavegador(StaticLiveServerTestCase):
             assert page.evaluate("document.documentElement.scrollWidth <= innerWidth")
             page.set_viewport_size({"width": 1280, "height": 800})
             expect(sidebar).to_have_css("width", "242px")
+            browser.close()
+
+    def test_roteiro_com_oito_pedidos_cabe_em_uma_folha_a4(self):
+        usuario = get_user_model().objects.create_user(
+            "roteiro8", password="Senha-teste-482!"
+        )
+        entregas = [
+            Entrega.objects.create(
+                nome=f"Cliente da parada {numero}",
+                cpf=f"12345678{numero:03d}",
+                endereco=f"Avenida Principal, {numero * 100} · Bairro Central",
+                telefone="11999991234",
+                cupom=f"CUPOM-{numero:03d}",
+                volumes=numero,
+                horario=datetime.strptime(f"{8 + numero:02d}:30", "%H:%M").time(),
+                responsavel="Carlos Oliveira",
+                observacoes="Entregar na portaria e confirmar o nome de quem recebeu.",
+                criado_por=usuario,
+            )
+            for numero in range(1, 9)
+        ]
+        ids = ",".join(str(entrega.pk) for entrega in entregas)
+        with sync_playwright() as playwright:
+            browser = playwright.chromium.launch()
+            page = browser.new_page(viewport={"width": 1280, "height": 800})
+            page.goto(self.live_server_url)
+            page.get_by_label("Usuário", exact=True).fill("roteiro8")
+            page.get_by_label("Senha", exact=True).fill("Senha-teste-482!")
+            page.get_by_role("button", name="Entrar no painel").click()
+            page.goto(f"{self.live_server_url}/roteiro/?ids={ids}")
+            expect(page.locator(".stop")).to_have_count(8)
+            page.emulate_media(media="print")
+            assert page.evaluate(
+                "[...document.querySelectorAll('.stop')].every(card => "
+                "card.scrollHeight <= card.clientHeight + 1)"
+            )
+            RESULTS.mkdir(exist_ok=True)
+            page.screenshot(path=str(RESULTS / "roteiro-8-pedidos.png"), full_page=True)
+            pdf = page.pdf(
+                path=str(RESULTS / "roteiro-8-pedidos.pdf"),
+                prefer_css_page_size=True,
+                print_background=True,
+            )
+            assert len(re.findall(rb"/Type\s*/Page(?!s)", pdf)) == 1
             browser.close()
 
     def test_cadastro_entregador_e_selecao_na_entrega(self):
@@ -201,13 +269,23 @@ class TestNavegador(StaticLiveServerTestCase):
             page.get_by_role("button", name="Salvar entregador").click()
             expect(page.locator("#courier-list")).to_contain_text("João da Silva")
             page.get_by_role("button", name="Inativar", exact=True).click()
+            expect(page.locator("#courier-confirm")).to_be_visible()
+            expect(page.locator("#courier-confirm-message")).to_contain_text(
+                "histórico"
+            )
+            page.locator("#courier-confirm-action").click()
             expect(page.locator("#courier-list .badge")).to_have_text("Inativo")
             page.get_by_role("button", name="Reativar", exact=True).click()
+            page.locator("#courier-confirm-action").click()
             expect(page.locator("#courier-list .badge")).to_have_text("Ativo")
+            page.get_by_label("Buscar entregadores").fill("inexistente")
+            expect(page.get_by_role("button", name="Limpar filtros")).to_be_visible()
+            page.get_by_role("button", name="Limpar filtros").click()
+            expect(page.locator("#courier-list tr")).to_have_count(1)
             page.screenshot(path=str(RESULTS / "entregadores.png"), full_page=True)
             page.set_viewport_size({"width": 390, "height": 844})
             assert page.evaluate("document.documentElement.scrollWidth <= innerWidth")
-            page.get_by_role("link", name="Controle de entregas").click()
+            page.get_by_role("link", name="Visão geral", exact=True).click()
             expect(page.locator("#stat-total")).to_have_text("0")
             page.get_by_role("button", name="Nova entrega", exact=True).click()
             page.get_by_label("Entregador", exact=True).select_option(
@@ -252,7 +330,7 @@ class TestNavegador(StaticLiveServerTestCase):
             expect(page.locator("#date")).to_have_value("2026-09-08")
             expect(page.locator("#stat-total")).to_have_text("0")
             expect(page.locator("#emit-route")).to_be_disabled()
-            page.get_by_role("button", name="Todas as entregas", exact=True).click()
+            page.get_by_role("link", name="Todas as entregas", exact=True).click()
             expect(page.locator("#stat-total")).to_have_text("1")
             browser.close()
 
@@ -513,7 +591,7 @@ class TestNavegador(StaticLiveServerTestCase):
             context.set_offline(False)
             page.get_by_role("link", name="Tentar reconectar").click()
             expect(page.locator("#stat-total")).to_have_text("10")
-            page.get_by_role("button", name="Sair", exact=True).click()
+            page.get_by_role("button", name="Sair do sistema", exact=True).click()
             expect(page.get_by_role("button", name="Entrar no painel")).to_be_visible()
             assert page.evaluate("localStorage.getItem('baranda.offline')") is None
             context.set_offline(True)

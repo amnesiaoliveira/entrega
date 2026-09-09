@@ -1,7 +1,7 @@
 (() => {
   const $ = (selector) => document.querySelector(selector);
   const escape = (value) => String(value ?? '').replace(/[&<>"']/g, (char) => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[char]));
-  let items = [], editing = null, busy = false, toastTimer;
+  let items = [], editing = null, pendingToggle = null, busy = false, toastTimer;
   async function api(url, options = {}) {
     const token = document.cookie.split('; ').find((entry) => entry.startsWith('csrftoken='))?.slice(10);
     const response = await fetch(url, {...options, signal: AbortSignal.timeout(15000), headers: {'Content-Type': 'application/json', 'X-CSRFToken': token || ''}});
@@ -22,10 +22,13 @@
     $('#courier-empty').hidden = filtered.length > 0;
     $('#courier-empty').textContent = 'Nenhum entregador encontrado. Use “Novo entregador” para cadastrar.';
     $('#courier-count').textContent = `${filtered.length} entregador(es) · ${items.filter((item) => item.ativo).length} ativo(s)`;
+    $('#courier-clear').hidden = !query && !status;
   }
   async function load() {
+    $('.deliveries-panel').setAttribute('aria-busy', 'true'); $('#courier-refresh').disabled = true;
     try { items = (await api('/api/entregadores/')).entregadores; $('#courier-error').hidden = true; render(); }
     catch (error) { $('#courier-error').textContent = `${error.message} Verifique a conexão e atualize a tabela.`; $('#courier-error').hidden = false; $('#courier-empty').hidden = true; }
+    finally { $('.deliveries-panel').setAttribute('aria-busy', 'false'); $('#courier-refresh').disabled = false; }
   }
   function open(item = null) {
     editing = item; $('#courier-form').reset(); $('#courier-form-error').hidden = true;
@@ -41,25 +44,45 @@
     if (!button || busy) return;
     const item = items.find((entry) => entry.id === Number(button.dataset.edit || button.dataset.toggle));
     if (button.dataset.edit) { open(item); return; }
-    busy = true; button.disabled = true;
-    try { await api(`/api/entregadores/${item.id}/`, {method: 'PATCH', body: JSON.stringify({...item, ativo: !item.ativo})}); toast(item.ativo ? 'Entregador inativado.' : 'Entregador reativado.'); await load(); }
-    catch (error) { $('#courier-error').textContent = error.message; $('#courier-error').hidden = false; }
-    finally { busy = false; button.disabled = false; }
+    pendingToggle = item;
+    $('#courier-confirm-title').textContent = item.ativo ? 'Inativar entregador?' : 'Reativar entregador?';
+    $('#courier-confirm-message').textContent = item.ativo ? `${item.nome} deixará de aparecer em novas atribuições. As entregas e o histórico serão preservados.` : `${item.nome} voltará a aparecer nas novas atribuições.`;
+    $('#courier-confirm-action').textContent = item.ativo ? 'Inativar' : 'Reativar';
+    $('#courier-confirm-action').classList.toggle('danger', item.ativo);
+    $('#courier-confirm-error').hidden = true;
+    $('#courier-confirm').showModal();
+  });
+  $('#courier-confirm-action').addEventListener('click', async () => {
+    if (!pendingToggle || busy) return;
+    const item = pendingToggle; busy = true; $('#courier-confirm-action').disabled = true;
+    try {
+      await api(`/api/entregadores/${item.id}/`, {method: 'PATCH', body: JSON.stringify({...item, ativo: !item.ativo})});
+      $('#courier-confirm').close(); pendingToggle = null;
+      toast(item.ativo ? 'Entregador inativado.' : 'Entregador reativado.'); await load();
+    } catch (error) { $('#courier-confirm-error').textContent = error.message; $('#courier-confirm-error').hidden = false; }
+    finally { busy = false; $('#courier-confirm-action').disabled = false; }
   });
   $('#courier-form').addEventListener('submit', async (event) => {
     event.preventDefault(); if (busy) return;
     const data = Object.fromEntries(new FormData(event.target)); data.ativo = data.ativo === 'true';
     if (editing) data.versao = editing.versao;
     busy = true; for (const element of event.target.elements) element.disabled = true;
+    const saveLabel = $('#save-courier').textContent; $('#save-courier').textContent = 'Salvando…';
     try {
       await api(editing ? `/api/entregadores/${editing.id}/` : '/api/entregadores/', {method: editing ? 'PATCH' : 'POST', body: JSON.stringify(data)});
       $('#courier-dialog').close(); toast('Entregador salvo.'); await load();
     } catch (error) { $('#courier-form-error').textContent = error.message; $('#courier-form-error').hidden = false; }
-    finally { busy = false; for (const element of event.target.elements) element.disabled = false; }
+    finally { busy = false; for (const element of event.target.elements) element.disabled = false; $('#save-courier').textContent = saveLabel; }
   });
   $('#courier-dialog').addEventListener('cancel', (event) => { if (busy) event.preventDefault(); });
   $('#courier-search').addEventListener('input', render);
   $('#courier-filter').addEventListener('change', render);
+  $('#courier-clear').addEventListener('click', () => {
+    $('#courier-search').value = '';
+    $('#courier-filter').value = '';
+    render();
+    $('#courier-search').focus();
+  });
   $('#courier-refresh').addEventListener('click', load);
   const phone = $('#courier-form').elements.namedItem('telefone');
   phone.addEventListener('input', () => {
@@ -72,6 +95,11 @@
     let cursor = 0, count = 0;
     while (cursor < phone.value.length && count < before) { if (/\d/.test(phone.value[cursor])) count++; cursor++; }
     phone.setSelectionRange(cursor, cursor);
+  });
+  document.addEventListener('keydown', (event) => {
+    if (event.key === '/' && !event.ctrlKey && !event.metaKey && !event.altKey && !$('#courier-dialog').open && !/INPUT|TEXTAREA|SELECT/.test(document.activeElement?.tagName)) {
+      event.preventDefault(); $('#courier-search').focus();
+    }
   });
   load();
 })();

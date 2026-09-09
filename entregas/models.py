@@ -85,6 +85,12 @@ class Entrega(models.Model):
     def sequencia(self):
         return f"{self.numero_diario:06d}"
 
+    @property
+    def cpf_formatado(self):
+        if len(self.cpf) != 11:
+            return self.cpf
+        return f"{self.cpf[:3]}.{self.cpf[3:6]}.{self.cpf[6:9]}-{self.cpf[9:]}"
+
     def save(self, *args, **kwargs):
         self.data = self._meta.get_field("data").to_python(self.data)
         # SQLite IMMEDIATE serializa a reserva e a gravação entre operadores.

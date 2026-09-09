@@ -3,19 +3,10 @@
 {% block head %}<link rel="stylesheet" href="{% static 'selection.css' %}">{% endblock %}
 {% block body %}
 <div class="app-layout" data-user="{{ request.user.pk }}" data-hoje="{{ hoje }}" data-fuso="{{ fuso }}">
-  <aside class="sidebar" id="sidebar-navigation">
-    <a class="brand" href="/"><span class="brand-mark">b<span>↗</span></span><span>super baranda<small>GESTÃO DE ENTREGAS</small></span></a>
-    <p class="nav-caption">PRINCIPAL</p>
-    <nav aria-label="Menu principal">
-      <button class="nav-item active" data-view="operacao" aria-label="Visão geral" title="Visão geral"><span data-icon="grid"></span>Visão geral</button>
-      <button class="nav-item" data-view="historico" aria-label="Todas as entregas" title="Todas as entregas"><span data-icon="box"></span>Todas as entregas</button>
-      <a class="nav-item" href="{% url 'cadastro-entregadores' %}" aria-label="Entregadores" title="Entregadores"><span data-icon="truck"></span>Entregadores</a>
-    </nav>
-    <div class="sidebar-bottom"><span class="avatar">{{ request.user.username|first|upper }}</span><div><strong>{{ request.user.get_short_name|default:request.user.username }}</strong><small>Equipe Super Baranda</small></div><form method="post" action="{% url 'logout' %}" id="logout-form">{% csrf_token %}<button class="icon-button" aria-label="Sair" title="Sair"><span data-icon="logout"></span></button></form></div>
-  </aside>
+  {% include 'entregas/_sidebar.html' with active_page='operacao' %}
   <div class="workspace">
     <header class="topbar"><div class="topbar-leading"><button type="button" class="icon-button sidebar-toggle" id="sidebar-toggle" aria-controls="sidebar-navigation" aria-expanded="true" aria-label="Recolher menu lateral" title="Recolher menu lateral" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16"/><path class="sidebar-chevron" d="m16 9-3 3 3 3"/></svg></button><div class="breadcrumb">Operação <span>/</span> <strong id="breadcrumb-title">Visão geral</strong></div></div><div class="topbar-right"><span id="connection" class="connection"><i></i>Conectado</span><span class="store-label"><span data-icon="store"></span> Super Baranda</span></div></header>
-    <main class="content">
+    <main class="content" id="main-content" tabindex="-1">
       <div class="page-heading"><div><div class="eyebrow" id="today-label"></div><h1 id="page-title">Entregas sob controle<span>.</span></h1><p class="muted" id="page-description">Da separação à porta do cliente, acompanhe cada etapa.</p></div><button class="button primary" id="new-delivery"><span data-icon="plus"></span>Nova entrega</button></div>
       <div id="offline-banner" class="notice" hidden>Você está sem conexão. Exibindo a última consulta salva; alterações precisam de conexão.</div>
       <section class="stats" aria-label="Resumo das entregas">
@@ -26,7 +17,7 @@
       </section>
       <section class="deliveries-panel">
         <div class="panel-heading"><div><h2>Controle de entregas <span id="list-count" class="count">0</span></h2><p class="muted">Todos os detalhes para uma entrega bem-feita.</p></div><button class="button secondary" id="export"><span data-icon="download"></span>Exportar</button></div>
-        <div class="filter-bar"><div class="search-field"><span data-icon="search"></span><input type="search" id="search" placeholder="Buscar cliente, CPF, cupom ou endereço…" aria-label="Buscar entregas"></div><label class="date-field"><span data-icon="calendar"></span><input type="date" id="date" value="{{ hoje }}" aria-label="Data das entregas"></label><button class="icon-button refresh" id="refresh" title="Atualizar entregas" aria-label="Atualizar entregas"><span data-icon="refresh"></span></button></div>
+        <div class="filter-bar"><div class="search-field"><span data-icon="search"></span><input type="search" id="search" placeholder="Buscar cliente, CPF, cupom ou endereço…" aria-label="Buscar entregas"><kbd title="Atalho de teclado">/</kbd></div><label class="date-field"><span data-icon="calendar"></span><input type="date" id="date" value="{{ hoje }}" aria-label="Data das entregas"></label><button class="text-button clear-filters" id="clear-filters" type="button" hidden>Limpar filtros</button><button class="icon-button refresh" id="refresh" title="Atualizar entregas" aria-label="Atualizar entregas"><span data-icon="refresh"></span></button></div>
         <div class="status-tabs" role="group" aria-label="Filtrar por status"><button class="active" data-status="">Todas <span id="tab-total">0</span></button><button data-status="pendente">Pendentes <span id="tab-pendente">0</span></button><button data-status="em_rota">Em rota <span id="tab-em_rota">0</span></button><button data-status="entregue">Entregues <span id="tab-entregue">0</span></button><button data-status="cancelada">Canceladas <span id="tab-cancelada">0</span></button></div>
         <div id="list-error" class="form-error" role="alert" hidden></div>
         <div class="selection-bar"><label><input type="checkbox" id="select-page" aria-label="Selecionar entregas desta página"> Selecionar página</label><span id="selection-count" role="status">Nenhuma selecionada</span><button type="button" class="text-button" id="clear-selection" disabled>Limpar seleção</button><button type="button" class="button primary" id="emit-route" disabled>Emitir guia de roteiro ↗</button></div>

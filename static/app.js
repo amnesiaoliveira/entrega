@@ -111,6 +111,8 @@
   }
   async function load() {
     const request = ++state.request;
+    $('.deliveries-panel').setAttribute('aria-busy', 'true');
+    $('#refresh').disabled = true;
     $('#list-error').hidden = true;
     $('#loading').hidden = state.items.length > 0;
     try {
@@ -139,6 +141,8 @@
     } finally {
       if (request === state.request) {
         $('#loading').hidden = true;
+        $('.deliveries-panel').setAttribute('aria-busy', 'false');
+        $('#refresh').disabled = false;
         render();
       }
     }
@@ -181,6 +185,9 @@
     $('#page-info').textContent = `${state.page} / ${pages}`;
     $('#previous').disabled = state.page === 1;
     $('#next').disabled = state.page === pages;
+    const defaultDate = followToday ? today : '';
+    $('#clear-filters').hidden = !($('#search').value || state.status || $('#date').value !== defaultDate);
+    document.querySelectorAll('.status-tabs [data-status]').forEach((button) => button.setAttribute('aria-pressed', String(button.dataset.status === state.status)));
   }
   function deliveryActions(item) {
     const button = (action, label) => `<button type="button" class="row-action" data-online-action data-action="${action}" data-id="${item.id}" ${state.online ? '' : 'disabled'}>${label}</button>`;
@@ -448,7 +455,11 @@
   function chooseStatus(status) {
     state.status = status;
     state.page = 1;
-    document.querySelectorAll('.status-tabs [data-status]').forEach((button) => button.classList.toggle('active', button.dataset.status === status));
+    document.querySelectorAll('.status-tabs [data-status]').forEach((button) => {
+      const active = button.dataset.status === status;
+      button.classList.toggle('active', active);
+      button.setAttribute('aria-pressed', String(active));
+    });
     render();
   }
   document.querySelectorAll('[data-status]').forEach((button) => button.addEventListener('click', () => chooseStatus(button.dataset.status)));
@@ -484,6 +495,14 @@
   $('#date').addEventListener('change', () => { followToday = $('#date').value === today && $('[data-view="operacao"]').classList.contains('active'); state.page = 1; load(); });
   let searchTimer;
   $('#search').addEventListener('input', () => { clearTimeout(searchTimer); searchTimer = setTimeout(() => { state.page = 1; load(); }, 300); });
+  $('#clear-filters').addEventListener('click', () => {
+    $('#search').value = '';
+    $('#date').value = followToday ? today : '';
+    chooseStatus('');
+    state.page = 1;
+    load();
+    $('#search').focus();
+  });
   $('#export').addEventListener('click', async () => {
     const query = params();
     query.set('status', state.status);
@@ -502,23 +521,41 @@
     } catch (error) { toast(error.message); }
     finally { $('#export').disabled = !state.online; }
   });
-  document.querySelectorAll('[data-view]').forEach((button) => button.addEventListener('click', () => {
-    const history = button.dataset.view === 'historico';
-    followToday = !history;
-    document.querySelectorAll('[data-view]').forEach((node) => node.classList.toggle('active', node === button));
-    $('#breadcrumb-title').textContent = history ? 'Todas as entregas' : 'Visão geral';
-    $('#page-title').innerHTML = history ? 'O histórico da sua operação<span>.</span>' : 'Entregas sob controle<span>.</span>';
-    $('#page-description').textContent = history ? 'Consulte entregas de qualquer data, em um só lugar.' : 'Da separação à porta do cliente, acompanhe cada etapa.';
-    $('#date').value = history ? '' : today;
+  function selectView(view, updateUrl = true) {
+    const historyView = view === 'historico';
+    followToday = !historyView;
+    document.querySelectorAll('[data-view]').forEach((node) => {
+      const active = node.dataset.view === view;
+      node.classList.toggle('active', active);
+      if (active) node.setAttribute('aria-current', 'page');
+      else node.removeAttribute('aria-current');
+    });
+    $('#breadcrumb-title').textContent = historyView ? 'Todas as entregas' : 'Visão geral';
+    $('#page-title').innerHTML = historyView ? 'O histórico da sua operação<span>.</span>' : 'Entregas sob controle<span>.</span>';
+    $('#page-description').textContent = historyView ? 'Consulte entregas de qualquer data, em um só lugar.' : 'Da separação à porta do cliente, acompanhe cada etapa.';
+    $('#date').value = historyView ? '' : today;
     $('#search').value = '';
     chooseStatus('');
+    const currentView = new URLSearchParams(location.search).get('view') === 'historico' ? 'historico' : 'operacao';
+    if (updateUrl && currentView !== view) window.history.pushState({view}, '', `/?view=${view}`);
     load();
+  }
+  document.querySelectorAll('[data-view]').forEach((link) => link.addEventListener('click', (event) => {
+    event.preventDefault();
+    selectView(link.dataset.view);
   }));
+  window.addEventListener('popstate', () => selectView(new URLSearchParams(location.search).get('view') === 'historico' ? 'historico' : 'operacao', false));
+  document.addEventListener('keydown', (event) => {
+    if (event.key === '/' && !event.ctrlKey && !event.metaKey && !event.altKey && !document.querySelector('dialog[open]') && !/INPUT|TEXTAREA|SELECT/.test(document.activeElement?.tagName)) {
+      event.preventDefault();
+      $('#search').focus();
+    }
+  });
   window.addEventListener('offline', () => connection(false));
   window.addEventListener('online', load);
   window.addEventListener('focus', checkDay);
   document.addEventListener('visibilitychange', () => { if (!document.hidden) checkDay(); });
   setInterval(() => { if (!document.hidden) checkDay(); }, 30000);
   connection(navigator.onLine);
-  load();
+  selectView(new URLSearchParams(location.search).get('view') === 'historico' ? 'historico' : 'operacao', false);
 })();

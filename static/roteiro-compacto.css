@@ -1,48 +1,167 @@
-/* Duas colunas aproveitam a folha sem remover dados das entregas. */
-main{max-width:980px;padding:22px}
-.toolbar{max-width:980px;margin:16px auto}
-h1{font-size:23px;margin:4px 0}
-header>p{margin:5px 0;font-size:11px;line-height:1.3}
-.totals{padding:7px 0;gap:18px;font-size:12px}
-.instructions{padding:8px}
-.departure{font-size:11px;line-height:1.6;margin:8px 0}
-#route-stops{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
-.stop{min-width:0;padding:10px;margin:0;border-radius:4px}
-.stop-heading{gap:6px;align-items:flex-start}
-.stop-heading h2{font-size:13px;line-height:1.3}
-.stop-heading>strong{font-size:10px;white-space:nowrap;padding-top:2px}
-.stop-number{padding:2px 5px;margin-right:3px}
-.reorder{gap:3px}
-.reorder button{padding:2px 6px}
-.address{font-size:11px;line-height:1.3;margin:6px 0}
-dl{gap:6px 8px;margin:6px 0}
-dt{font-size:9px;margin-bottom:1px}
-dd{font-size:11px;line-height:1.2}
-.notes{font-size:10px;line-height:1.3;margin:5px 0}
-.receipt{padding-top:5px;font-size:10px;line-height:1.6}
-footer{font-size:10px;padding-top:8px}
-@media screen and (max-width:700px){#route-stops{grid-template-columns:1fr}main{padding:14px}.stop-heading h2{min-width:0}.stop-heading{flex-wrap:nowrap}}
-@page{size:A4 portrait;margin:8mm}
-@media print{
-  body{color:#000;font:8pt Arial,sans-serif}
-  main{padding:0;max-width:none}
-  header{break-inside:avoid}
-  header>p{font-size:7.5pt;line-height:1.2;margin:1mm 0;color:#222}
-  .brand{font-size:8pt;letter-spacing:1px}
-  h1{font-size:15pt;margin:1mm 0}
-  .totals{padding:1mm 0;gap:5mm;font-size:8pt;border-color:#999}
-  .departure{font-size:8pt;line-height:1.5;margin:2mm 0}
-  #route-stops{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:2mm 3mm;align-items:start}
-  .stop{padding:2mm;margin:0;border:1px solid #999;border-radius:0;break-inside:avoid;box-decoration-break:clone}
-  .stop-heading{gap:1.5mm;flex-wrap:nowrap}
-  .stop-heading h2{font-size:9pt;line-height:1.15;min-width:0}
-  .stop-heading>strong{font-size:8pt;padding:0}
-  .stop-number{background:none;padding:0;margin-right:1mm}
-  .address{font-size:8pt;line-height:1.2;margin:1.5mm 0}
-  dl{grid-template-columns:repeat(3,minmax(0,1fr));gap:1.2mm 2mm;margin:1.5mm 0}
-  dt{font-size:7pt;color:#333;margin:0}
-  dd{font-size:8pt;line-height:1.15}
-  .notes{font-size:8pt;line-height:1.2;margin:1mm 0}
-  .receipt{border-color:#999;padding-top:1.5mm;margin:1.5mm 0 0;font-size:7.5pt;line-height:1.7}
-  footer{font-size:7pt;color:#333;padding-top:2mm}
+/* Grade de impressão: oito paradas por folha A4 em modo retrato. */
+@page {
+  size: A4 portrait;
+  margin: 7mm
+}
+
+@media print {
+  html,
+  body {
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    background: #fff
+  }
+
+  body {
+    color: #000;
+    font: 7pt Arial, sans-serif
+  }
+
+  .toolbar,
+  .reorder,
+  .instructions {
+    display: none !important
+  }
+
+  .route-sheet {
+    width: 100%;
+    max-width: none;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    box-shadow: none
+  }
+
+  .manifest-header {
+    grid-template-columns: 1fr auto;
+    gap: 1mm 5mm;
+    padding: 0 0 1.5mm;
+    margin: 0 0 2mm;
+    border-bottom: .5mm solid #000;
+    break-inside: avoid
+  }
+
+  .manifest-title h1 {
+    margin: .5mm 0;
+    font-size: 13pt;
+    line-height: 1;
+    letter-spacing: 0
+  }
+
+  .manifest-title p,
+  .manifest-meta p {
+    margin: .5mm 0;
+    font-size: 7pt;
+    line-height: 1.1
+  }
+
+  .brand {
+    font-size: 7.5pt;
+    letter-spacing: 1px
+  }
+
+  .totals {
+    gap: 3mm;
+    margin-top: 1mm;
+    font-size: 7pt
+  }
+
+  .departure {
+    padding-top: 1.5mm;
+    font-size: 7pt;
+    line-height: 1.25;
+    white-space: nowrap
+  }
+
+  #route-stops {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-rows: repeat(4, 55mm);
+    grid-auto-rows: 55mm;
+    gap: 2mm 3mm;
+    align-items: stretch
+  }
+
+  .stop {
+    height: 55mm;
+    min-width: 0;
+    padding: 2mm;
+    border: .3mm solid #777;
+    border-radius: 0;
+    overflow: hidden;
+    break-inside: avoid;
+    page-break-inside: avoid
+  }
+
+  .stop-heading {
+    gap: 1mm;
+    padding-bottom: 1mm;
+    margin-bottom: 1mm;
+    border-color: #aaa
+  }
+
+  .stop-heading>div:first-child {
+    gap: 1.5mm
+  }
+
+  .stop-number {
+    padding: 1mm 1.5mm;
+    background: #000 !important;
+    color: #fff !important;
+    font-size: 7.5pt;
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact
+  }
+
+  .delivery-id {
+    font-size: 8pt
+  }
+
+  .details-grid {
+    grid-template-columns: minmax(0, 1.5fr) minmax(24mm, 1fr);
+    gap: 2mm
+  }
+
+  .customer-details p {
+    margin: .6mm 0;
+    font-size: 7pt;
+    line-height: 1.15
+  }
+
+  dl {
+    grid-template-columns: 1fr 1fr;
+    gap: 1mm 1.5mm
+  }
+
+  dt {
+    margin: 0;
+    color: #333;
+    font-size: 5.8pt
+  }
+
+  dd {
+    font-size: 6.8pt;
+    line-height: 1.1
+  }
+
+  .notes {
+    font-size: 6.5pt !important
+  }
+
+  .receipt {
+    grid-template-columns: 1fr 1fr;
+    gap: .5mm 2mm;
+    margin-top: 1mm;
+    padding-top: 1mm;
+    border-color: #555;
+    font-size: 6.2pt;
+    line-height: 1.15
+  }
+
+  footer {
+    padding-top: 1.5mm;
+    color: #333;
+    font-size: 6.5pt
+  }
 }

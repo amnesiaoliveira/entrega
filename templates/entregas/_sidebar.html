@@ -1,0 +1,11 @@
+<a class="skip-link" href="#main-content">Pular para o conteúdo</a>
+<aside class="sidebar" id="sidebar-navigation">
+  <a class="brand" href="/?view=operacao" aria-label="Super Baranda — visão geral"><span class="brand-mark">b<span>↗</span></span><span>super baranda<small>GESTÃO DE ENTREGAS</small></span></a>
+  <p class="nav-caption">PRINCIPAL</p>
+  <nav aria-label="Menu principal">
+    <a class="nav-item{% if active_page == 'operacao' %} active{% endif %}" href="/?view=operacao" data-view="operacao" aria-label="Visão geral" title="Visão geral"{% if active_page == 'operacao' %} aria-current="page"{% endif %}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>Visão geral</a>
+    <a class="nav-item{% if active_page == 'historico' %} active{% endif %}" href="/?view=historico" data-view="historico" aria-label="Todas as entregas" title="Todas as entregas"{% if active_page == 'historico' %} aria-current="page"{% endif %}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true"><path d="m12 3 9 5v9l-9 5-9-5V8zM3 8l9 5 9-5M12 13v9M7.5 5.5l9 5v4"/></svg>Todas as entregas</a>
+    <a class="nav-item{% if active_page == 'entregadores' %} active{% endif %}" href="{% url 'cadastro-entregadores' %}" aria-label="Entregadores" title="Entregadores"{% if active_page == 'entregadores' %} aria-current="page"{% endif %}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true"><path d="M3 5h11v12H3zM14 9h4l3 4v4h-7"/><circle cx="7" cy="18" r="2"/><circle cx="18" cy="18" r="2"/></svg>Entregadores</a>
+  </nav>
+  <div class="sidebar-bottom"><span class="avatar">{{ request.user.username|first|upper }}</span><div><strong>{{ request.user.get_short_name|default:request.user.username }}</strong><small>Equipe Super Baranda</small></div><form method="post" action="{% url 'logout' %}" id="logout-form">{% csrf_token %}<button class="icon-button" aria-label="Sair do sistema" title="Sair do sistema"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true"><path d="M10 4H4v16h6M9 12h12m-5-5 5 5-5 5"/></svg></button></form></div>
+</aside>

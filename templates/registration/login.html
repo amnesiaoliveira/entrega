@@ -2,20 +2,19 @@
 {% block title %}Entrar · Super Baranda{% endblock %}
 {% block body %}
 <main class="login-layout">
-  <section class="login-story">
-    <a class="brand" href="/"><span class="brand-mark">b<span>↗</span></span><span>super baranda<small>GESTÃO DE ENTREGAS</small></span></a>
-    <div><span class="eyebrow light">DA NOSSA LOJA ATÉ A SUA PORTA</span><h1>Cada entrega.<br>Um cuidado a mais.</h1><p>Organização para a equipe.<br>Tranquilidade para quem espera.</p><div class="route-art" aria-hidden="true"><span>▣</span><i></i><span>✓</span><i></i><span>⌂</span></div></div>
-    <small>Super Baranda · Tudo em seu lugar.</small>
+  <section class="login-panel" aria-labelledby="login-title">
+    <form method="post" class="login-form">
+      {% csrf_token %}
+      <header class="login-header">
+        <a class="brand" href="/" aria-label="Super Baranda"><span class="brand-mark">b<span>↗</span></span><span>super baranda</span></a>
+        <h1 id="login-title">Entrar</h1>
+      </header>
+      {% if form.errors %}<p class="form-error" role="alert">Usuário ou senha inválidos.</p>{% endif %}
+      <div class="login-field"><label for="id_username">Usuário</label><input id="id_username" name="username" autocomplete="username" maxlength="150" required autofocus></div>
+      <div class="login-field"><label for="id_password">Senha</label><input id="id_password" name="password" type="password" autocomplete="current-password" required></div>
+      <input type="hidden" name="next" value="{{ next }}">
+      <button class="button primary" type="submit" aria-label="Entrar no painel">Entrar</button>
+    </form>
   </section>
-  <section class="login-panel"><form method="post" class="login-form">
-    {% csrf_token %}
-    <span class="eyebrow">BEM-VINDO À OPERAÇÃO</span><h2>Vamos começar?</h2><p class="muted">Entre com sua conta para acompanhar as entregas.</p>
-    {% if form.errors %}<p class="form-error" role="alert">Usuário ou senha inválidos. Confira os dados e tente novamente.</p>{% endif %}
-    <label for="id_username">Usuário</label><input id="id_username" name="username" autocomplete="username" maxlength="150" required autofocus placeholder="Seu usuário">
-    <label for="id_password">Senha</label><input id="id_password" name="password" type="password" autocomplete="current-password" required placeholder="Sua senha">
-    <input type="hidden" name="next" value="{{ next }}">
-    <button class="button primary" type="submit">Entrar no painel <span>→</span></button>
-    <p class="login-help">Precisa de acesso? Fale com o responsável pela loja.</p>
-  </form></section>
 </main>
 {% endblock %}
